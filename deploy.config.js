@@ -25,6 +25,6 @@ module.exports = {
   vercel: {
     token: 'Eh21Bq1332cmFI2pKOqLVueG',
     orgId: 'team_m9qh00IACWJhdRUEimwit93n',
-    projectId: 'prj_TMoYORqMmQ1mKMYh04qSWo3griMF'
+    projectId: 'prj_sPnN4A76B6NnWF8DaUmahsQimNX7'
   }
 };
