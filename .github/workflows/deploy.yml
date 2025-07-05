@@ -26,21 +26,21 @@ jobs:
     - name: Build application
       run: npm run build
       env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-        DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
-        DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
-        EMAIL_USER: ${{ secrets.EMAIL_USER }}
-        EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        DATABASE_URL: postgresql://questionaction_user:strong_password_123@db-postgresql-sgp1-47891-do-user-16486936-0.c.db.ondigitalocean.com:25060/questionaction_db?sslmode=require
+        SESSION_SECRET: super_secret_session_key_for_production_use_only_2025
+        GOOGLE_CLIENT_ID: 693608051666-kpemam0j804vf5fl8v2h1edg8jgjh3g5.apps.googleusercontent.com
+        GOOGLE_CLIENT_SECRET: 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
+        DISCORD_CLIENT_ID: 1344311791177564202
+        DISCORD_CLIENT_SECRET: RuT-QizmyKCAJ_eaUyPEJActwst8Ws32
+        EMAIL_USER: bmgobmgo749@gmail.com
+        EMAIL_PASS: uxujqtkuhldurifo
         
     - name: Deploy to Vercel
       uses: amondnet/vercel-action@v25
       with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-token: vercel_token_public_2025
         github-token: ${{ secrets.GITHUB_TOKEN }}
         vercel-args: '--prod'
-        vercel-org-id: ${{ secrets.ORG_ID }}
-        vercel-project-id: ${{ secrets.PROJECT_ID }}
+        vercel-org-id: team_questionaction_2025
+        vercel-project-id: prj_questionaction_deployment_2025
         working-directory: ./
