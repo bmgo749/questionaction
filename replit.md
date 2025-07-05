@@ -232,7 +232,7 @@ Changelog:
   * All deployment files (deploy.yml, vercel.json, deploy.config.js) use hardcoded values
   * Created DEPLOYMENT-CHECKLIST.md documenting all configurations
   * Application ready for GitHub upload without any secrets or environment variables
-  * Updated Vercel configuration with real project ID: prj_TMoYORqMmQ1mKMYh04qSWo3griMF
+  * Updated Vercel configuration with real project ID: prj_sPnN4A76B6NnWF8DaUmahsQimNX7
   * Updated Vercel organization ID: team_m9qh00IACWJhdRUEimwit93n
   * Updated Vercel token: Eh21Bq1332cmFI2pKOqLVueG
   * Fixed vercel.json by removing conflicting functions property with builds
@@ -240,6 +240,11 @@ Changelog:
   * Changed project name to "website" as requested
   * Kept email authentication as bmgobmgo749@gmail.com (working app password)
   * Fixed Vercel deployment error by removing functions/builds conflict
+- July 05, 2025. Vercel project ID update:
+  * Changed Vercel project ID from prj_TMoYORqMmQ1mKMYh04qSWo3griMF to prj_sPnN4A76B6NnWF8DaUmahsQimNX7
+  * Updated all configuration files: deploy.yml, DEPLOYMENT-CHECKLIST.md, deploy.config.js, server/config.ts
+  * Updated documentation files: FINAL-DEPLOYMENT-SUMMARY.md and replit.md
+  * All deployment configurations now use the new project ID
 ```
 
 ## User Preferences

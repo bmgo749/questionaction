@@ -28,7 +28,7 @@
 ### Vercel Configuration
 - ✅ Token: `Eh21Bq1332cmFI2pKOqLVueG`
 - ✅ Organization ID: `team_m9qh00IACWJhdRUEimwit93n`
-- ✅ Project ID: `prj_TMoYORqMmQ1mKMYh04qSWo3griMF`
+- ✅ Project ID: `prj_sPnN4A76B6NnWF8DaUmahsQimNX7`
 
 ### Database Connection
 - ✅ PostgreSQL DigitalOcean: `postgresql://questionaction_user:strong_password_123@db-postgresql-sgp1-47891-do-user-16486936-0.c.db.ondigitalocean.com:25060/questionaction_db?sslmode=require`
@@ -67,7 +67,7 @@ All files are configured with hardcoded values and ready for upload to GitHub re
 4. Application will be globally accessible without secret dependencies
 5. Vercel deployment will use token: `Eh21Bq1332cmFI2pKOqLVueG`
 6. Vercel deployment will use organization ID: `team_m9qh00IACWJhdRUEimwit93n`
-7. Vercel deployment will use project ID: `prj_TMoYORqMmQ1mKMYh04qSWo3griMF`
+7. Vercel deployment will use project ID: `prj_sPnN4A76B6NnWF8DaUmahsQimNX7`
 
 ## ✅ Deployment Domains
 - Primary: `https://kaiserliche.my.id`

@@ -26,7 +26,7 @@
 #### Vercel Deployment
 - ✅ **Token**: Eh21Bq1332cmFI2pKOqLVueG
 - ✅ **Organization ID**: team_m9qh00IACWJhdRUEimwit93n
-- ✅ **Project ID**: prj_TMoYORqMmQ1mKMYh04qSWo3griMF
+- ✅ **Project ID**: prj_sPnN4A76B6NnWF8DaUmahsQimNX7
 - ✅ **Fixed Configuration**: Removed functions/builds conflict
 
 ## ✅ Files Ready for GitHub Upload
