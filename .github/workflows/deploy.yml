@@ -42,5 +42,5 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         vercel-args: '--prod'
         vercel-org-id: team_m9qh00IACWJhdRUEimwit93n
-        vercel-project-id: prj_TMoYORqMmQ1mKMYh04qSWo3griMF
+        vercel-project-id: prj_sPnN4A76B6NnWF8DaUmahsQimNX7
         working-directory: ./
