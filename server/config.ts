@@ -29,7 +29,7 @@ export const CONFIG = {
   // Vercel Configuration
   VERCEL_TOKEN: 'Eh21Bq1332cmFI2pKOqLVueG',
   VERCEL_ORG_ID: 'team_m9qh00IACWJhdRUEimwit93n',
-  VERCEL_PROJECT_ID: 'prj_TMoYORqMmQ1mKMYh04qSWo3griMF',
+  VERCEL_PROJECT_ID: 'prj_sPnN4A76B6NnWF8DaUmahsQimNX7',
   
   // OAuth Callback URLs
   GOOGLE_CALLBACK_URL: '/api/auth/google/callback',
