@@ -28,4 +28,4 @@ jobs:
     - name: Run database migration
       run: npm run db:push
       env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        DATABASE_URL: postgresql://questionaction_user:strong_password_123@db-postgresql-sgp1-47891-do-user-16486936-0.c.db.ondigitalocean.com:25060/questionaction_db?sslmode=require
