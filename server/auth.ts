@@ -2,17 +2,18 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import { storage } from './storage';
+import { CONFIG } from './config';
 import type { UpsertUser } from '@shared/schema';
 
-// Initialize passport with optional OAuth strategies
-// Only setup OAuth if environment variables are provided
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+// Initialize passport with hardcoded OAuth strategies from config - NO SECRETS NEEDED
+
+if (CONFIG.GOOGLE_CLIENT_ID && CONFIG.GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
       {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: '/api/auth/google/callback',
+        clientID: CONFIG.GOOGLE_CLIENT_ID,
+        clientSecret: CONFIG.GOOGLE_CLIENT_SECRET,
+        callbackURL: CONFIG.GOOGLE_CALLBACK_URL,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -35,13 +36,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
+if (CONFIG.DISCORD_CLIENT_ID && CONFIG.DISCORD_CLIENT_SECRET) {
   passport.use(
     new DiscordStrategy(
       {
-        clientID: process.env.DISCORD_CLIENT_ID,
-        clientSecret: process.env.DISCORD_CLIENT_SECRET,
-        callbackURL: '/api/auth/discord/callback',
+        clientID: CONFIG.DISCORD_CLIENT_ID,
+        clientSecret: CONFIG.DISCORD_CLIENT_SECRET,
+        callbackURL: CONFIG.DISCORD_CALLBACK_URL,
         scope: ['identify', 'email'],
       },
       async (accessToken, refreshToken, profile, done) => {

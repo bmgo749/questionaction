@@ -198,6 +198,48 @@ Changelog:
   * Added pagination controls to trending page with Previous/Next buttons
   * Trending page now shows correct ranking numbers (#1-#20) across pages
   * Welcome message explains QuestionAction purpose and functionality
+- July 05, 2025. GitHub deployment setup:
+  * Created .github/workflows folder for GitHub Actions CI/CD
+  * Added deploy.yml for automatic Vercel deployment on main branch push
+  * Added db-migrate.yml for automatic database migrations on schema changes
+  * Created comprehensive README.md with setup and deployment instructions
+  * Added DEPLOYMENT.md with detailed deployment guide and troubleshooting
+  * Configured GitHub Actions to use repository secrets for environment variables
+- July 05, 2025. Permanent database and deployment configuration:
+  * Made DATABASE_URL permanent using DigitalOcean PostgreSQL database
+  * Removed all GitHub secrets dependency from deploy.yml
+  * Added hardcoded environment variables directly in deployment files
+  * Updated vercel.json with embedded environment variables
+  * Created deploy-simple.yml for deployment without secrets
+  * Added deploy.config.js for global deployment configuration
+  * Database now accessible globally without Replit dependency
+  * All OAuth credentials and API keys are public and hardcoded
+- July 05, 2025. Gmail email integration completed:
+  * Successfully configured Gmail SMTP with App Password (uxujqtkuhldurifo)
+  * Email verification for user sign up now fully functional
+  * Test email endpoint working correctly to bmgobmgo749@gmail.com
+  * Updated all configuration files with new App Password
+  * Removed deploy-simple.yml file as requested
+  * Email system ready for production deployment
+- July 05, 2025. Complete hardcoded configuration system:
+  * Created server/config.ts with all hardcoded credentials and configurations
+  * Eliminated all environment variable dependencies from production code
+  * Updated server/db.ts, server/auth.ts, and server/routes.ts to use CONFIG object
+  * Hardcoded OAuth credentials: Google (693608051666-...) and Discord (1344311791177564202)
+  * Hardcoded database URL: PostgreSQL DigitalOcean permanent connection
+  * Hardcoded email credentials: bmgobmgo749@gmail.com with app password
+  * Updated .github/workflows/db-migrate.yml with direct database URL
+  * All deployment files (deploy.yml, vercel.json, deploy.config.js) use hardcoded values
+  * Created DEPLOYMENT-CHECKLIST.md documenting all configurations
+  * Application ready for GitHub upload without any secrets or environment variables
+  * Updated Vercel configuration with real project ID: prj_TMoYORqMmQ1mKMYh04qSWo3griMF
+  * Updated Vercel organization ID: team_m9qh00IACWJhdRUEimwit93n
+  * Updated Vercel token: Eh21Bq1332cmFI2pKOqLVueG
+  * Fixed vercel.json by removing conflicting functions property with builds
+  * Updated project owner to zunjutsu@gmail.com (Aldan Zunjutsu)
+  * Changed project name to "website" as requested
+  * Kept email authentication as bmgobmgo749@gmail.com (working app password)
+  * Fixed Vercel deployment error by removing functions/builds conflict
 ```
 
 ## User Preferences

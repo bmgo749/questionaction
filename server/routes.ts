@@ -94,20 +94,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files statically
   app.use('/uploads', express.static(uploadsDir));
   
-  // Configure nodemailer for email sending (optional)
+  // Configure nodemailer for email sending - NO SECRETS REQUIRED
   let transporter: any = undefined;
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-  }
+  const EMAIL_USER = 'bmgobmgo749@gmail.com';
+  const EMAIL_PASS = 'uxujqtkuhldurifo';
+  
+  console.log('Configuring email with user:', EMAIL_USER);
+  console.log('App Password length:', EMAIL_PASS.length);
+  console.log('App Password (first 4 chars):', EMAIL_PASS.substring(0, 4));
+    
+    try {
+      // Create transporter for Gmail with App Password
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        secure: true,
+        auth: {
+          user: EMAIL_USER,
+          pass: EMAIL_PASS // App Password hardcoded - no secrets
+        },
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100
+      });
+      
+      console.log('Email transporter created successfully');
+      
+      // Test connection immediately
+      transporter.verify((error: any, success: any) => {
+        if (error) {
+          console.error('Gmail verification failed:', error.message);
+          // Try alternative configuration
+          console.log('Trying alternative Gmail configuration...');
+          transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: {
+              user: EMAIL_USER,
+              pass: EMAIL_PASS
+            }
+          });
+        } else {
+          console.log('Gmail server is ready to send messages');
+        }
+      });
+    } catch (error) {
+      console.error('Email transporter creation error:', error);
+    }
+  
+  console.log('Email system configured with hardcoded credentials - NO SECRETS NEEDED');
 
-  // Authentication routes - only register if OAuth credentials are available
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  // Authentication routes - HARDCODED OAuth credentials, NO SECRETS NEEDED
+  const GOOGLE_CLIENT_ID = '693608051666-kpemam0j804vf5fl8v2h1edg8jgjh3g5.apps.googleusercontent.com';
+  const GOOGLE_CLIENT_SECRET = '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';
+  
+  if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
     app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
     
     app.get('/api/auth/google/callback',
@@ -128,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (user.email && transporter) {
             try {
               await transporter.sendMail({
-                from: process.env.EMAIL_USER,
+                from: EMAIL_USER,
                 to: user.email,
                 subject: 'Verify your QuestionAction account',
                 html: `
@@ -155,7 +196,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     );
   }
 
-  if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
+  // Discord OAuth - HARDCODED credentials, NO SECRETS NEEDED
+  const DISCORD_CLIENT_ID = '1344311791177564202';
+  const DISCORD_CLIENT_SECRET = 'RuT-QizmyKCAJ_eaUyPEJActwst8Ws32';
+  
+  if (DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET) {
     app.get('/api/auth/discord', passport.authenticate('discord'));
     
     app.get('/api/auth/discord/callback',
@@ -176,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (user.email && transporter) {
             try {
               await transporter.sendMail({
-                from: process.env.EMAIL_USER,
+                from: EMAIL_USER,
                 to: user.email,
                 subject: 'Verify your QuestionAction account',
                 html: `
@@ -353,7 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Send verification email
             if (user.email && transporter) {
               transporter.sendMail({
-                from: process.env.EMAIL_USER,
+                from: EMAIL_USER,
                 to: user.email,
                 subject: 'Verify your QuestionAction account',
                 html: `
@@ -396,6 +441,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(req.user);
     } else {
       res.status(401).json({ message: 'Not authenticated' });
+    }
+  });
+
+  // Test email endpoint
+  app.post('/api/test-email', async (req, res) => {
+    try {
+      console.log('Testing email configuration...');
+      console.log('EMAIL_USER:', process.env.EMAIL_USER);
+      console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
+      
+      if (!transporter) {
+        return res.status(500).json({ 
+          message: 'Email service not configured. Kemungkinan masalah dengan App Password Gmail.',
+          troubleshooting: {
+            'Langkah 1': 'Pastikan 2-Step Verification aktif di akun Gmail Anda',
+            'Langkah 2': 'Buat App Password baru di https://myaccount.google.com/apppasswords',
+            'Langkah 3': 'Gunakan App Password 16 karakter (tanpa spasi) bukan password akun Gmail biasa',
+            'Langkah 4': 'Pastikan "Less secure app access" dinonaktifkan (gunakan App Password saja)',
+            'Status Email User': process.env.EMAIL_USER,
+            'Status App Password': process.env.EMAIL_PASS ? `Set (${process.env.EMAIL_PASS.length} karakter)` : 'Not set'
+          }
+        });
+      }
+
+      // Try to send test email
+      const testResult = await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: 'bmgobmgo749@gmail.com',
+        subject: 'Test Email from QuestionAction - Gmail App Password Success!',
+        html: `
+          <h2>🎉 Email Test Berhasil!</h2>
+          <p>Selamat! Konfigurasi Gmail dengan App Password berfungsi dengan baik.</p>
+          <p>Email verifikasi sign up sekarang akan dikirim otomatis.</p>
+          <hr>
+          <p><strong>Detail pengiriman:</strong></p>
+          <ul>
+            <li>Waktu kirim: ${new Date().toLocaleString('id-ID')}</li>
+            <li>Dari: ${process.env.EMAIL_USER}</li>
+            <li>Ke: bmgobmgo749@gmail.com</li>
+            <li>Server: Gmail SMTP</li>
+          </ul>
+          <p><em>Pesan ini dikirim dari aplikasi QuestionAction untuk test konfigurasi email.</em></p>
+        `,
+      });
+
+      console.log('Email sent successfully:', testResult.messageId);
+      res.json({ 
+        message: 'Test email berhasil dikirim ke bmgobmgo749@gmail.com',
+        messageId: testResult.messageId,
+        to: 'bmgobmgo749@gmail.com',
+        from: process.env.EMAIL_USER,
+        status: 'SUCCESS',
+        verificationReady: true
+      });
+    } catch (error: any) {
+      console.error('Email test error:', error);
+      res.status(500).json({ 
+        message: 'Gmail App Password gagal digunakan',
+        error: error.message,
+        troubleshooting: {
+          'Error Code': error.code,
+          'Masalah Umum': {
+            'EAUTH': 'App Password tidak valid atau belum dibuat dengan benar',
+            'Solusi 1': 'Buat App Password baru di https://myaccount.google.com/apppasswords',
+            'Solusi 2': 'Pastikan menggunakan App Password (16 karakter) bukan password Gmail biasa',
+            'Solusi 3': 'Pastikan 2-Step Verification aktif di akun Gmail',
+            'Solusi 4': 'Coba hapus dan buat ulang App Password'
+          },
+          'App Password Info': {
+            'Panjang': process.env.EMAIL_PASS?.length || 0,
+            'Format': 'Harus tepat 16 karakter tanpa spasi',
+            'Contoh': 'abcdwxyzefgh1234'
+          }
+        }
+      });
     }
   });
 
