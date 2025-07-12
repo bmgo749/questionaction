@@ -1,23 +1,12 @@
 import { useState } from 'react';
-import { Menu, X, LogIn, Lightbulb } from 'lucide-react';
+import { Menu, X, LogIn, Lightbulb, Settings, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Link } from 'wouter';
+import { SecureLink } from '@/components/SecureRouter';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { categories } from '@/data/categories';
 
-const iconMap: Record<string, string> = {
-  globe: '🌍',
-  history: '📚',
-  flask: '🧪',
-  map: '🗺️',
-  running: '🏃',
-  film: '🎬',
-  landmark: '🏛️',
-  microchip: '💻',
-  heartbeat: '❤️',
-  'graduation-cap': '🎓',
-};
+
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
@@ -38,7 +27,7 @@ export function MobileMenu() {
       <SheetContent side="right" className="w-80">
         <div className="flex flex-col space-y-4 mt-8">
           {/* Login Button */}
-          <Link
+          <SecureLink
             href="/auth"
             onClick={() => setOpen(false)}
           >
@@ -46,50 +35,76 @@ export function MobileMenu() {
               <LogIn className="mr-3 h-5 w-5" />
               <span>Login</span>
             </div>
-          </Link>
+          </SecureLink>
 
           {/* Create Article Button */}
-          <Link
+          <SecureLink
             href="/create-article"
             onClick={() => setOpen(false)}
           >
-            <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
+            <div className="flex items-center px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors">
               <Lightbulb className="mr-3 h-5 w-5" />
-              <span>Creativity Creation</span>
+              <span>Create</span>
             </div>
-          </Link>
+          </SecureLink>
+
+          {/* Settings Button */}
+          <SecureLink
+            href="/settings"
+            onClick={() => setOpen(false)}
+          >
+            <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
+              <Settings className="mr-3 h-5 w-5" />
+              <span>Settings</span>
+            </div>
+          </SecureLink>
 
           {/* Separator */}
           <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
 
           {/* Navigation Items */}
-          <Link href="/" onClick={() => setOpen(false)}>
+          <SecureLink href="/" onClick={() => setOpen(false)}>
             <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
-              <span className="mr-3 text-lg">🏠</span>
               <span>Home</span>
             </div>
-          </Link>
+          </SecureLink>
           
-          <Link href="/categories" onClick={() => setOpen(false)}>
+          <SecureLink href="/categories" onClick={() => setOpen(false)}>
             <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
-              <span className="mr-3 text-lg">📁</span>
               <span>Category</span>
             </div>
-          </Link>
+          </SecureLink>
           
-          <Link href="/trending" onClick={() => setOpen(false)}>
+          <SecureLink href="/trending" onClick={() => setOpen(false)}>
             <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
-              <span className="mr-3 text-lg">🔥</span>
               <span>Trending</span>
             </div>
-          </Link>
+          </SecureLink>
           
-          <Link href="/question" onClick={() => setOpen(false)}>
+          <SecureLink href="/market" onClick={() => setOpen(false)}>
             <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
-              <span className="mr-3 text-lg">❓</span>
-              <span>Question</span>
+              <span>Market</span>
             </div>
-          </Link>
+          </SecureLink>
+          
+          <SecureLink href="/question" onClick={() => setOpen(false)}>
+            <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
+              <span>Help</span>
+            </div>
+          </SecureLink>
+          
+          <SecureLink href="/page" onClick={() => setOpen(false)}>
+            <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
+              <span>Page</span>
+            </div>
+          </SecureLink>
+          
+          <SecureLink href="/guilds" onClick={() => setOpen(false)}>
+            <div className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
+              <Users className="mr-3 h-5 w-5" />
+              <span>Guilds</span>
+            </div>
+          </SecureLink>
         </div>
       </SheetContent>
     </Sheet>
