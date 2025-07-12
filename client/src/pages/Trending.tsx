@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, Eye, ThumbsUp, MessageCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'wouter';
+import { SecureLink } from '@/components/SecureRouter';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,17 +83,17 @@ export default function Trending() {
               <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Start creating and engaging with content to see trending topics appear here
               </p>
-              <Link href="/create-article">
+              <SecureLink href="/create-article">
                 <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
                   Create Article
                 </button>
-              </Link>
+              </SecureLink>
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {trendingArticles.map((article: Article, index: number) => (
-              <Link key={article.id} href={`/article/${article.id}`}>
+              <SecureLink key={article.id} href={`/article/${article.id}`}>
                 <Card className="cursor-pointer glow-hover">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between mb-2">
@@ -137,7 +137,7 @@ export default function Trending() {
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
+              </SecureLink>
             ))}
           </div>
         )}

@@ -1,33 +1,36 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, MessageCircle, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { Mail, MessageCircle, ArrowLeft, KeyRound } from "lucide-react";
+import { SecureLink } from "@/components/SecureRouter";
+import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 
 export default function Login() {
+
   const handleGoogleLogin = () => {
     window.location.href = '/api/auth/google';
   };
 
   const handleDiscordLogin = () => {
-    window.location.href = 'https://discord.com/oauth2/authorize?client_id=1344311791177564202&response_type=code&redirect_uri=https%3A%2F%2Fkaiserliche.my.id&scope=identify+email';
+    window.location.href = 'https://discord.com/oauth2/authorize?client_id=1344311791177564202&response_type=code&redirect_uri=https%3A%2F%2Fqueit.site%2F&scope=identify+email';
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-blue-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link href="/">
+        <SecureLink href="/">
           <Button variant="ghost" className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Kembali ke Beranda
           </Button>
-        </Link>
+        </SecureLink>
         
         <Card className="w-full shadow-xl">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-black dark:bg-white rounded-lg flex items-center justify-center">
               <span className="text-white dark:text-black font-bold text-xl">Q</span>
             </div>
-            <CardTitle className="text-2xl font-bold">Masuk ke QuestionAction</CardTitle>
+            <CardTitle className="text-2xl font-bold">Masuk ke Queit</CardTitle>
             <CardDescription>
               Pilih metode login untuk mengakses platform pengetahuan kami
             </CardDescription>
@@ -65,11 +68,21 @@ export default function Login() {
               </div>
             </Button>
 
-            <div className="mt-6 text-center">
+            <div className="mt-6 text-center space-y-4">
               <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
                 <Mail className="w-4 h-4" />
                 <span>Email konfirmasi akan dikirim setelah pendaftaran</span>
               </div>
+              
+              <ForgotPasswordModal>
+                <Button 
+                  variant="ghost" 
+                  className="w-full h-10 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Lupa Password? Reset di sini
+                </Button>
+              </ForgotPasswordModal>
             </div>
 
             <div className="mt-6 text-xs text-center text-gray-500">

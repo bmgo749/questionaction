@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useParams } from 'wouter';
+import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ThumbsUp, ThumbsDown, Star, MessageCircle, Send, Calendar, User, X, Maximize, Crown } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Star, MessageCircle, Send, Calendar, User, X, Maximize, Crown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Layout } from '@/components/Layout';
+import { IQBadge } from '@/components/IQBadge';
+import { MembershipBadges } from '@/components/MembershipBadges';
 import type { Article, Comment } from '@shared/schema';
 
 interface LikeStatus {
@@ -23,6 +25,7 @@ interface LikeStatus {
 
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
   const { t } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -34,6 +37,12 @@ export default function ArticlePage() {
 
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  const handleAvatarClick = (authorId?: string) => {
+    if (authorId && authorId !== user?.id) {
+      setLocation(`/user/${authorId}`);
+    }
   };
 
   // Fetch article
@@ -237,6 +246,36 @@ export default function ArticlePage() {
     },
   });
 
+  // Delete article mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/articles/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete article');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Article Deleted',
+        description: 'Article has been permanently deleted.',
+      });
+      setLocation('/');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Delete Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleLike = () => {
     likeMutation.mutate(true);
   };
@@ -264,6 +303,15 @@ export default function ArticlePage() {
       content: commentContent.trim(),
     });
   };
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
+      deleteMutation.mutate();
+    }
+  };
+
+  // Check if current user is the author
+  const isAuthor = user && article && (article.author === user.id);
 
   if (articleLoading) {
     return (
@@ -312,14 +360,27 @@ export default function ArticlePage() {
                   </Badge>
                 ))}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.history.back()}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Exit Article
-              </Button>
+              <div className="flex gap-2">
+                {isAuthor && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleDelete}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.history.back()}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Exit Article
+                </Button>
+              </div>
             </div>
             <CardTitle className="text-3xl font-bold mb-4">{article.title}</CardTitle>
             <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
@@ -389,9 +450,19 @@ export default function ArticlePage() {
         <Card className="glow-hover">
           <CardContent className="p-8">
             <div className="prose prose-lg dark:prose-invert max-w-none">
-              <div className="whitespace-pre-wrap text-lg leading-relaxed">
-                {article.content}
-              </div>
+              <div 
+                className="whitespace-pre-wrap text-lg leading-relaxed p-4 rounded-lg"
+                style={{
+                  fontFamily: article.fontFamily || 'Inter',
+                  fontSize: article.fontSize ? `${article.fontSize}px` : '18px',
+                  color: article.textColor || 'inherit',
+                  backgroundColor: 'white',
+                  textAlign: article.textAlign as 'left' | 'center' | 'right' || 'left',
+                  fontWeight: article.isBold ? 'bold' : 'normal',
+                  fontStyle: article.isItalic ? 'italic' : 'normal',
+                }}
+                dangerouslySetInnerHTML={{ __html: article.content }}
+              />
             </div>
           </CardContent>
         </Card>
@@ -474,11 +545,14 @@ export default function ArticlePage() {
                         </Badge>
                       )}
                     </span>
-                    <div className="flex items-center gap-1">
-                      <Crown className="w-3 h-3 text-yellow-500" />
-                      <span className="text-xs text-yellow-600 dark:text-yellow-400">
-                        {user?.fame || 0} Fame
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Crown className="w-3 h-3 text-yellow-500" />
+                        <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                          {user?.fame || 0} Honor
+                        </span>
+                      </div>
+                      <IQBadge iqScore={user?.iqScore || null} size="sm" />
                     </div>
                   </div>
                 </div>
@@ -524,7 +598,10 @@ export default function ArticlePage() {
               ) : (
                 comments.map((comment) => (
                   <div key={comment.id} className="flex gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Avatar className="h-10 w-10 flex-shrink-0">
+                    <Avatar 
+                      className={`h-10 w-10 flex-shrink-0 ${comment.authorId && comment.authorId !== user?.id ? 'cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all' : ''}`}
+                      onClick={() => handleAvatarClick(comment.authorId)}
+                    >
                       <AvatarImage 
                         src={comment.authorProfileUrl || '/default-avatar.png'} 
                         alt={comment.authorName || comment.author}
@@ -537,8 +614,11 @@ export default function ArticlePage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-gray-900 dark:text-white">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span 
+                          className={`font-medium text-gray-900 dark:text-white ${comment.authorId && comment.authorId !== user?.id ? 'cursor-pointer hover:text-blue-600 dark:hover:text-blue-400' : ''}`}
+                          onClick={() => handleAvatarClick(comment.authorId)}
+                        >
                           {comment.authorName || comment.author}
                         </span>
                         {comment.authorAlias && (
@@ -550,7 +630,7 @@ export default function ArticlePage() {
                           <div className="flex items-center gap-1">
                             <Crown className="w-3 h-3 text-yellow-500" />
                             <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
-                              {comment.authorFame} Fame
+                              {comment.authorFame} Honor
                             </span>
                           </div>
                         )}

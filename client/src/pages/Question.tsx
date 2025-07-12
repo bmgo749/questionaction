@@ -1,14 +1,17 @@
-import { HelpCircle, Mail, Phone, MapPin, Clock, Shield, FileText, Users } from 'lucide-react';
+import { HelpCircle, Mail, Phone, MapPin, Clock, Shield, FileText, Users, Brain } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useIQStatus } from '@/hooks/useIQStatus';
+import { SecureLink } from '@/components/SecureRouter';
 
 export default function Question() {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { data: iqStatus } = useIQStatus();
 
   const faqItems = [
     {
@@ -16,8 +19,8 @@ export default function Question() {
       answer: "Click on 'Creativity Creation' in the header or navigation menu to start creating your article. Fill in the title, select a category, add content, and publish."
     },
     {
-      question: "How does the fame system work?",
-      answer: "You earn 0.1 fame points for each article you create. You also get additional fame based on likes: 1 fame for 100+ likes, 5 fame for 1000+ likes, and 10+ fame for 10,000+ likes."
+      question: "How does the honour system work?",
+      answer: "You earn 0.1 honour points for each article you create. You also get additional honour based on likes: 1 honour for 100+ likes, 5 honour for 1000+ likes, and 10+ honour for 10,000+ likes."
     },
     {
       question: "Can I edit my profile?",
@@ -37,7 +40,7 @@ export default function Question() {
     {
       icon: Mail,
       title: "Email Support",
-      content: "support@questionaction.com",
+      content: "support@queit.com",
       description: "Get help within 24 hours"
     },
     {
@@ -93,13 +96,44 @@ export default function Question() {
                   Hi {user?.firstName || 'Newcomer'}!
                 </h1>
                 <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
-                  Welcome to QuestionAction, here you can ask and make an action for answer these question! 
+                  Welcome to Queit, here you can ask and make an action for answer these question! 
                   Now you can search any article do you want or review and comment it!
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* IQ Test Section - Only show if test hasn't been taken */}
+        {iqStatus && !iqStatus.iqTestTaken && (
+          <div className="mb-8">
+            <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                      <Brain className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Take Your Intelligence Quotient Test
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-300 text-sm">
+                        Get a personalized score displayed with your profile and comments
+                      </p>
+                    </div>
+                  </div>
+                  <SecureLink href="/iq-test">
+                    <Button className="bg-purple-600 hover:bg-purple-700">
+                      <Brain className="h-4 w-4 mr-2" />
+                      Start Test
+                    </Button>
+                  </SecureLink>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* FAQ Section */}

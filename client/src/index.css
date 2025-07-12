@@ -44,6 +44,24 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   }
 }
 
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 @keyframes shimmer {
   0% {
     background: hsl(0, 0%, 100%);
@@ -74,12 +92,64 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   }
 }
 
+/* Database tier hover animations */
+@keyframes inter-outline {
+  0% {
+    border-color: rgba(168, 85, 247, 0.4);
+    box-shadow: 0 0 0 0px rgba(168, 85, 247, 0.5);
+  }
+  33% {
+    border-color: rgba(168, 85, 247, 1);
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.7);
+  }
+  66% {
+    border-color: rgba(168, 85, 247, 1);
+    box-shadow: 0 0 0 6px rgba(168, 85, 247, 0.5);
+  }
+  100% {
+    border-color: rgba(168, 85, 247, 0.4);
+    box-shadow: 0 0 0 0px rgba(168, 85, 247, 0.3);
+  }
+}
+
+@keyframes pro-outline-infinite {
+  0% {
+    border-color: rgba(34, 211, 238, 0.6);
+    box-shadow: 0 0 0 0px rgba(34, 211, 238, 0.6);
+  }
+  25% {
+    border-color: rgba(34, 211, 238, 1);
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.8);
+  }
+  50% {
+    border-color: rgba(34, 211, 238, 1);
+    box-shadow: 0 0 0 8px rgba(34, 211, 238, 0.6);
+  }
+  75% {
+    border-color: rgba(34, 211, 238, 1);
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.8);
+  }
+  100% {
+    border-color: rgba(34, 211, 238, 0.6);
+    box-shadow: 0 0 0 0px rgba(34, 211, 238, 0.6);
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.5s ease-out;
 }
 
 .animate-progress {
   animation: progress-bar 2s ease-in-out;
+}
+
+/* Database tier hover classes */
+.db-inter-hover:hover {
+  animation: inter-outline 6s ease-in-out;
+}
+
+.db-pro-hover:hover {
+  animation: pro-outline-infinite 2s infinite ease-in-out;
 }
 
 .animate-shimmer {
@@ -132,6 +202,57 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 .dark .glow-hover:hover {
   border: 2px solid rgba(255, 255, 255, 0.8);
   animation: glow-pulse-dark 2s ease-in-out infinite;
+}
+
+/* Efek pudar untuk kategori tertentu */
+.fade-category {
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.fade-category:hover {
+  opacity: 1;
+}
+
+/* Efek mengkilau untuk tombol lihat semua kategori */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+.shimmer-button {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 3s infinite;
+  animation-delay: 0s;
+  animation-iteration-count: 1;
+}
+
+.shimmer-button.animate-shimmer {
+  animation: shimmer 3s infinite;
+}
+
+.dark .shimmer-button {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
 }
 
 :root {

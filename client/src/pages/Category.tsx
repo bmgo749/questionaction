@@ -1,4 +1,3 @@
-import { useParams, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '@/components/Layout';
 import { Sidebar } from '@/components/Sidebar';
@@ -9,25 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Article } from '@shared/schema';
 import { X } from 'lucide-react';
+import { useCategoryCounts } from '@/hooks/useCategoryCounts';
+import { SecureLink } from '@/components/SecureRouter';
 
-const iconMap: Record<string, string> = {
-  globe: '🌍',
-  history: '📚',
-  flask: '🧪',
-  map: '🗺️',
-  running: '🏃',
-  film: '🎬',
-  landmark: '🏛️',
-  microchip: '💻',
-  heartbeat: '❤️',
-  'graduation-cap': '🎓',
-};
+interface CategoryProps {
+  slug: string;
+}
 
-export default function Category() {
-  const { slug } = useParams<{ slug: string }>();
+export default function Category({ slug }: CategoryProps) {
   const { t } = useLanguage();
+  const { data: categoryCounts, isLoading: countsLoading } = useCategoryCounts();
   
-  const category = getCategoryBySlug(slug!);
+  const category = getCategoryBySlug(slug);
   
   // Fetch articles by category
   const { data: articles = [], isLoading } = useQuery<Article[]>({
@@ -62,8 +54,8 @@ export default function Category() {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mr-4 glow-hover">
-                    <span className="text-3xl">{iconMap[category.icon]}</span>
+                  <div className="text-3xl font-bold text-gray-600 dark:text-gray-400 min-w-[4rem] mr-6">
+                    {countsLoading ? "..." : (categoryCounts?.[category.id] || 0)}
                   </div>
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -74,12 +66,12 @@ export default function Category() {
                     </p>
                   </div>
                 </div>
-                <Link href="/">
+                <SecureLink href="/">
                   <Button variant="outline" size="sm">
                     <X className="h-4 w-4 mr-2" />
                     Exit Category
                   </Button>
-                </Link>
+                </SecureLink>
               </div>
               <p className="text-gray-700 dark:text-gray-300 text-lg">
                 {t(`categoryDescriptions.${category.id}`)}
@@ -90,7 +82,6 @@ export default function Category() {
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <div className="text-center">
-                  <div className="text-6xl mb-4">{iconMap[category.icon]}</div>
                   <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
                     Loading articles...
                   </h3>
@@ -99,7 +90,6 @@ export default function Category() {
             ) : articles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <div className="text-center">
-                  <div className="text-6xl mb-4">{iconMap[category.icon]}</div>
                   <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
                     No articles yet
                   </h3>
@@ -111,7 +101,7 @@ export default function Category() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {articles.map((article) => (
-                  <Link key={article.id} href={`/article/${article.id}`}>
+                  <SecureLink key={article.id} href={`/article/${article.id}`}>
                     <Card className="glow-hover cursor-pointer hover:shadow-lg transition-shadow">
                       <CardHeader>
                         <div className="flex items-start justify-between">
@@ -139,7 +129,7 @@ export default function Category() {
                         </div>
                       </CardContent>
                     </Card>
-                  </Link>
+                  </SecureLink>
                 ))}
               </div>
             )}

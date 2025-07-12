@@ -110,6 +110,16 @@ export const categories: CategoryData[] = [
     hoverBgColor: 'orange-200',
     articleCount: 0,
   },
+  {
+    id: 'astronomy',
+    name: 'Space & Astronomy',
+    slug: 'astronomy',
+    icon: 'telescope',
+    color: 'violet-600',
+    bgColor: 'violet-100',
+    hoverBgColor: 'violet-200',
+    articleCount: 0,
+  },
 ];
 
 export const getCategoryBySlug = (slug: string): CategoryData | undefined => {

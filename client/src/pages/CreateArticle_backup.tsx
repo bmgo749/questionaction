@@ -18,7 +18,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
 import { categories } from '@/data/categories';
 
-
 const createArticleSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   content: z.string().min(10, 'Content must be at least 10 characters'),
@@ -60,25 +59,56 @@ export default function CreateArticle() {
     align: 'left',
     fontFamily: 'Inter'
   });
-
-  // Sync main formatting state with currentLineFormat
-  useEffect(() => {
-    setCurrentLineFormat(prev => ({
-      ...prev,
-      fontSize: fontSize,
-      color: textColor,
-      fontFamily: fontFamily,
-      align: textAlign,
-      bold: isBold,
-      italic: isItalic
-    }));
-  }, [fontSize, textColor, fontFamily, textAlign, isBold, isItalic]);
   
   // File upload state
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
 
-  // Always initialize form to maintain hook order
+  // Check authentication status
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "You must be logged in to create articles. Redirecting to login...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        setLocation('/auth');
+      }, 2000);
+    }
+  }, [isAuthenticated, isLoading, toast, setLocation]);
+
+  // Show loading or authentication required message
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 flex justify-center items-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-8 h-8 rounded-full bg-blue-600 animate-spin border-2 border-white border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 flex justify-center items-center min-h-[400px]">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center">
+            <Lock className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Login Required</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              You must be logged in to create articles. You will be redirected to the login page.
+            </p>
+            <Button onClick={() => setLocation('/auth')} className="w-full">
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const form = useForm<CreateArticleForm>({
     resolver: zodResolver(createArticleSchema),
     defaultValues: {
@@ -91,22 +121,6 @@ export default function CreateArticle() {
       enableForum: false,
     },
   });
-
-  // Check authentication status
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Login Required",
-        description: "You must be logged in to create articles. Redirecting to login...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        const code = Math.random().toString(36).substring(2, 15);
-        const errorCode = Math.random().toString(36).substring(2, 8);
-        window.location.href = `/v2/?code=${code}&errorCode=${errorCode}#auth`;
-      }, 2000);
-    }
-  }, [isAuthenticated, isLoading, toast, setLocation]);
 
   const createArticleMutation = useMutation({
     mutationFn: async (data: CreateArticleForm & { thumbnailFile?: File }) => {
@@ -136,13 +150,6 @@ export default function CreateArticle() {
         thumbnail: thumbnailUrl,
         language: data.language,
         enableForum: data.enableForum,
-        // Font formatting data
-        fontFamily: fontFamily,
-        fontSize: parseInt(fontSize),
-        fontColor: textColor,
-        backgroundColor: backgroundColor,
-        isBold: isBold,
-        isItalic: isItalic,
       };
       
       const response = await fetch('/api/articles', {
@@ -178,9 +185,7 @@ export default function CreateArticle() {
           description: 'Please log in to create articles.',
           variant: 'destructive',
         });
-        const code = Math.random().toString(36).substring(2, 15);
-        const errorCode = Math.random().toString(36).substring(2, 8);
-        window.location.href = `/v2/?code=${code}&errorCode=${errorCode}#auth`;
+        setLocation('/auth');
       } else {
         toast({
           title: 'Error',
@@ -263,33 +268,26 @@ export default function CreateArticle() {
     const textArea = document.getElementById('content') as HTMLTextAreaElement;
     if (!textArea) return;
 
-    // Update the textarea style directly for WYSIWYG editing
+    const start = textArea.selectionStart;
+    const end = textArea.selectionEnd;
+    const selectedText = textArea.value.substring(start, end);
+    
+    let formattedText = '';
+    let formatTag = '';
+    
     switch (format) {
       case 'bold':
-        setIsBold(prev => {
-          const newBold = !prev;
-          setCurrentLineFormat(prev => ({ ...prev, bold: newBold }));
-          return newBold;
-        });
+        formattedText = selectedText ? `**${selectedText}**` : '****';
+        setCurrentLineFormat(prev => ({ ...prev, bold: !prev.bold }));
         break;
       case 'italic':
-        setIsItalic(prev => {
-          const newItalic = !prev;
-          setCurrentLineFormat(prev => ({ ...prev, italic: newItalic }));
-          return newItalic;
-        });
+        formattedText = selectedText ? `*${selectedText}*` : '**';
+        setCurrentLineFormat(prev => ({ ...prev, italic: !prev.italic }));
         break;
-      case 'apply-style':
-        // Apply all current formatting to the textarea
-        setFontSize(currentLineFormat.fontSize);
-        setTextColor(currentLineFormat.color);
-        setFontFamily(currentLineFormat.fontFamily);
-        setTextAlign(currentLineFormat.align);
-        setIsBold(currentLineFormat.bold);
-        setIsItalic(currentLineFormat.italic);
-        break;
-      case 'reset-format':
-        // Reset all formatting to defaults
+      case 'newline-reset':
+        // Insert new line with reset formatting
+        formatTag = `\n<div style="font-family: ${fontFamily}; font-size: ${fontSize}px; color: ${textColor}; text-align: ${textAlign}; font-weight: normal; font-style: normal;">`;
+        formattedText = formatTag + (selectedText || 'Type here...') + '</div>';
         setCurrentLineFormat({
           bold: false,
           italic: false,
@@ -298,64 +296,51 @@ export default function CreateArticle() {
           align: 'left',
           fontFamily: 'Inter'
         });
-        setFontSize('16');
-        setTextColor('#000000');
-        setFontFamily('Inter');
-        setTextAlign('left');
-        setIsBold(false);
-        setIsItalic(false);
         break;
+      case 'line-style':
+        // Apply current formatting to current line
+        const styles = [];
+        if (currentLineFormat.bold) styles.push('font-weight: bold');
+        if (currentLineFormat.italic) styles.push('font-style: italic');
+        styles.push(`font-family: ${currentLineFormat.fontFamily}`);
+        styles.push(`font-size: ${currentLineFormat.fontSize}px`);
+        styles.push(`color: ${currentLineFormat.color}`);
+        styles.push(`text-align: ${currentLineFormat.align}`);
+        
+        formatTag = `<div style="${styles.join('; ')};">`;
+        formattedText = formatTag + (selectedText || 'Type here...') + '</div>';
+        break;
+      default:
+        return;
     }
     
-    // Keep focus on textarea
+    const newValue = textArea.value.substring(0, start) + formattedText + textArea.value.substring(end);
+    form.setValue('content', newValue);
+    
+    // Restore focus and selection
     setTimeout(() => {
       textArea.focus();
+      const newPosition = start + formattedText.length;
+      textArea.setSelectionRange(newPosition, newPosition);
     }, 0);
   };
 
-
+  const resetCurrentLineFormatting = () => {
+    setCurrentLineFormat({
+      bold: false,
+      italic: false,
+      fontSize: '16',
+      color: '#000000',
+      align: 'left',
+      fontFamily: 'Inter'
+    });
+  };
 
   const selectedCategories = form.watch('categories');
 
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="max-w-4xl mx-auto p-6 flex justify-center items-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-8 h-8 rounded-full bg-blue-600 animate-spin border-2 border-white border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show authentication required
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-4xl mx-auto p-6 flex justify-center items-center min-h-[400px]">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-8 text-center">
-            <Lock className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Login Required</h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You must be logged in to create articles. You will be redirected to the login page.
-            </p>
-            <Button onClick={() => {
-              const code = Math.random().toString(36).substring(2, 15);
-              const errorCode = Math.random().toString(36).substring(2, 8);
-              window.location.href = `/v2/?code=${code}&errorCode=${errorCode}#auth`;
-            }} className="w-full">
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-4xl mx-auto p-6">
-        <Card className="glow-hover">
+      <Card className="glow-hover">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl font-bold flex items-center gap-2">
@@ -558,24 +543,36 @@ export default function CreateArticle() {
                     <Italic className="h-4 w-4" />
                   </Button>
                   
-                  {/* Apply Current Style */}
+                  {/* Apply Line Styling */}
                   <Button
                     type="button"
                     variant="default"
                     size="sm"
-                    onClick={() => applyFormatting('apply-style')}
+                    onClick={() => applyFormatting('line-style')}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Type className="h-4 w-4 mr-1" />
                     Apply Style
                   </Button>
                   
-                  {/* Reset All Formatting */}
+                  {/* New Line with Reset */}
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => applyFormatting('reset-format')}
+                    onClick={() => applyFormatting('newline-reset')}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    New Line Reset
+                  </Button>
+                  
+                  {/* Reset Current Format */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={resetCurrentLineFormatting}
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     <X className="h-4 w-4 mr-1" />
@@ -593,11 +590,7 @@ export default function CreateArticle() {
                       min="8"
                       max="72"
                       value={currentLineFormat.fontSize}
-                      onChange={(e) => {
-                        const newSize = e.target.value;
-                        setCurrentLineFormat(prev => ({ ...prev, fontSize: newSize }));
-                        setFontSize(newSize);
-                      }}
+                      onChange={(e) => setCurrentLineFormat(prev => ({ ...prev, fontSize: e.target.value }))}
                       className="h-8"
                     />
                   </div>
@@ -607,11 +600,7 @@ export default function CreateArticle() {
                       id="lineColor"
                       type="color"
                       value={currentLineFormat.color}
-                      onChange={(e) => {
-                        const newColor = e.target.value;
-                        setCurrentLineFormat(prev => ({ ...prev, color: newColor }));
-                        setTextColor(newColor);
-                      }}
+                      onChange={(e) => setCurrentLineFormat(prev => ({ ...prev, color: e.target.value }))}
                       className="h-8"
                     />
                   </div>
@@ -619,10 +608,7 @@ export default function CreateArticle() {
                     <Label htmlFor="lineFont" className="text-xs">Font Family</Label>
                     <Select
                       value={currentLineFormat.fontFamily}
-                      onValueChange={(value) => {
-                        setCurrentLineFormat(prev => ({ ...prev, fontFamily: value }));
-                        setFontFamily(value);
-                      }}
+                      onValueChange={(value) => setCurrentLineFormat(prev => ({ ...prev, fontFamily: value }))}
                     >
                       <SelectTrigger className="h-8">
                         <SelectValue />
@@ -640,7 +626,7 @@ export default function CreateArticle() {
                 </div>
 
                 <div className="text-xs text-gray-600 dark:text-gray-400">
-                  💡 Tip: Set formatting options above, then click "Apply Style" to apply all formatting to your text. Changes appear instantly in the editor below.
+                  💡 Tip: Set formatting options above, then click "Apply Style" to format selected text. Use "New Line Reset" to start a new paragraph with default formatting.
                 </div>
               </div>
             </div>
@@ -664,7 +650,7 @@ export default function CreateArticle() {
                 }}
               />
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                💡 Your text appears with the formatting applied above. Changes to font, size, color, bold, and italic affect your writing in real-time.
+                💡 Use the formatting tools above to create styled content with different fonts per line. HTML and inline styles are supported.
               </div>
               {form.formState.errors.content && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.content.message}</p>
@@ -706,7 +692,7 @@ export default function CreateArticle() {
             </Button>
           </form>
         </CardContent>
-        </Card>
+      </Card>
     </div>
   );
 }
