@@ -19,8 +19,12 @@
       "dest": "/server/index.ts"
     },
     {
+      "src": "/v2/(.*)",
+      "dest": "/dist/public/index.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/dist/public/$1"
+      "dest": "/dist/public/index.html"
     }
   ],
 
@@ -33,6 +37,6 @@
     "DISCORD_CLIENT_SECRET": "RuT-QizmyKCAJ_eaUyPEJActwst8Ws32",
     "EMAIL_USER": "bmgobmgo749@gmail.com",
     "email_pass": "uxujqtkuhldurifo",
-    "DEPLOYMENT_DOMAIN": "https://queit-two.vercel.app"
+    "DEPLOYMENT_DOMAIN": "https://queit.site"
   }
 }
