@@ -73,6 +73,7 @@ export const comments = pgTable("comments", {
   authorFame: integer("author_fame").default(0), // Honor at time of comment
   authorProfileUrl: text("author_profile_url"), // Profile image URL
   content: text("content").notNull(),
+  userIp: text("user_ip").notNull(), // IP address for tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -193,7 +194,7 @@ export const postLikes = pgTable("post_likes", {
   postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
   userIp: text("user_ip").notNull(),
   userId: text("user_id"), // nullable for anonymous users
-  type: text("type").notNull(), // 'like' or 'dislike'
+  isLike: boolean("is_like").notNull(), // true for like, false for dislike
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   uniqueUserPost: unique().on(table.postId, table.userIp),
@@ -308,6 +309,7 @@ export const insertCommentSchema = createInsertSchema(comments).pick({
   authorFame: true,
   authorProfileUrl: true,
   content: true,
+  userIp: true,
 });
 
 export const insertArticleLikeSchema = createInsertSchema(articleLikes).pick({
@@ -376,13 +378,16 @@ export const insertPostSchema = createInsertSchema(posts).pick({
   authorName: true,
   authorIp: true,
   originalPostId: true,
+}).extend({
+  author: z.string().optional(),
+  userIp: z.string().optional(),
 });
 
 export const insertPostLikeSchema = createInsertSchema(postLikes).pick({
   postId: true,
   userIp: true,
   userId: true,
-  type: true,
+  isLike: true,
 });
 
 export const insertPostCommentSchema = createInsertSchema(postComments).pick({
@@ -392,6 +397,9 @@ export const insertPostCommentSchema = createInsertSchema(postComments).pick({
   authorName: true,
   authorIp: true,
   authorIq: true,
+}).extend({
+  author: z.string().optional(),
+  userIp: z.string().optional(),
 });
 
 export const insertPostDownloadSchema = createInsertSchema(postDownloads).pick({

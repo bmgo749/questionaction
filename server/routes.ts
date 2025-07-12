@@ -513,10 +513,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create or update user in database
         const userData = {
           id: `discord_${discordUser.id}`,
-          email: discordUser.email || null,
-          firstName: discordUser.username || null,
-          lastName: discordUser.discriminator || null,
-          profileImageUrl: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
+          email: discordUser.email || undefined,
+          firstName: discordUser.username || undefined,
+          lastName: discordUser.discriminator || undefined,
+          profileImageUrl: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : undefined,
           provider: 'discord',
         };
 
@@ -2219,7 +2219,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create comment
   app.post("/api/comments", async (req, res) => {
     try {
-      const validatedData = insertCommentSchema.parse(req.body);
+      const commentData = {
+        ...req.body,
+        userIp: getClientIP(req)
+      };
+      const validatedData = insertCommentSchema.parse(commentData);
       const comment = await storage.createComment(validatedData);
       res.status(201).json(comment);
     } catch (error) {
@@ -2345,6 +2349,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       postData.authorId = user?.id || null;
       postData.authorName = user ? `${user.firstName} ${user.lastName}` : 'Anonymous User';
       postData.authorIp = userIp;
+      postData.author = user?.id || 'Anonymous';
+      postData.userIp = userIp;
       
       const validatedData = insertPostSchema.parse(postData);
       const post = await storage.createPost(validatedData);
@@ -2367,7 +2373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         postId,
         userIp,
         userId: req.session.userId || null,
-        type
+        isLike: type === 'like'
       };
       
       const validatedData = insertPostLikeSchema.parse(likeData);
@@ -2429,7 +2435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const counts = await storage.getPostLikeCounts(postId);
       
       res.json({
-        userLike: userLike?.type || null,
+        userLike: userLike?.isLike ? 'like' : 'dislike',
         ...counts
       });
     } catch (error) {
@@ -2453,6 +2459,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authorName: user ? `${user.firstName} ${user.lastName}` : 'Anonymous User',
         authorIp: userIp,
         authorIq: null,
+        author: user?.id || 'Anonymous',
+        userIp: userIp,
       };
       
       const validatedData = insertPostCommentSchema.parse(commentData);
@@ -2536,6 +2544,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authorName: user ? `${user.firstName} ${user.lastName}` : 'Anonymous User',
         authorIp: userIp,
         originalPostId: originalPostId,
+        author: user?.id || 'Anonymous',
+        userIp: userIp,
       };
       
       const validatedData = insertPostSchema.parse(repostData);
@@ -2602,7 +2612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user is the author
-      const canDelete = post.authorId === req.session.userId || post.authorIp === userIp;
+      const canDelete = post.author === req.session.userId || post.authorIp === userIp;
       if (!canDelete) {
         return res.status(403).json({ message: "You can only delete your own posts" });
       }
@@ -2986,7 +2996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         success: true,
-        message: vote.updatedAt ? "Vote updated successfully" : "Vote submitted successfully",
+        message: "Vote submitted successfully",
         totalVotes,
         results
       });
@@ -3414,7 +3424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Query execution failed",
-        error: error.message 
+        error: error instanceof Error ? error.message : 'Unknown error' 
       });
     }
   });

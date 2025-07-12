@@ -2,12 +2,12 @@ import { IStorage } from './storage';
 import { 
   UserModel, ArticleModel, VisitorModel, CommentModel, 
   ArticleLikeModel, ArticleFavoriteModel, PostModel, PagePostModel,
-  PagePostLikeModel, PagePostCommentModel, PagePostVoteModel,
+  PagePostLikeModel as PagePostLikeModelSchema, PagePostCommentModel as PagePostCommentModelSchema, PagePostVoteModel as PagePostVoteModelSchema,
   IqTestTrackingModel, GuildModel, GuildMemberModel, GuildPostModel,
   GuildPostLikeModel, GuildPostCommentModel, GuildJoinRequestModel,
   getNextSequence,
   User, Article, Visitor, Comment, ArticleLike, ArticleFavorite,
-  Post, PagePost, PagePostLike, PagePostComment, PagePostVote,
+  Post, PagePost, PagePostLike as PagePostLikeSchema, PagePostComment as PagePostCommentSchema, PagePostVote as PagePostVoteSchema,
   IqTestTracking, Guild, GuildMember, GuildPost, GuildPostLike,
   GuildPostComment, GuildJoinRequest, InsertUser, InsertArticle, 
   UpsertUser, UpdateProfile
@@ -724,7 +724,7 @@ export class MongoStorage implements IStorage {
     return posts;
   }
 
-  async deletePagePost(id: number): Promise<void> {
+  async deletePagePostById(id: number): Promise<void> {
     await connectToMongoDB();
     await PagePostModel.deleteOne({ id }).exec();
   }
@@ -1509,11 +1509,5 @@ export class MongoStorage implements IStorage {
     return request || undefined;
   }
 
-  async updateGuildMemberCount(guildId: number, memberCount: number): Promise<void> {
-    await connectToMongoDB();
-    await GuildModel.updateOne(
-      { id: guildId },
-      { $set: { memberCount, updatedAt: new Date() } }
-    ).exec();
-  }
+
 }
