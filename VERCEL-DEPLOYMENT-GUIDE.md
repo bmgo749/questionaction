@@ -198,18 +198,20 @@ curl https://queit.site/api/stats
 }
 ```
 
-### package.json Scripts
-```json
-{
-  "scripts": {
-    "build": "npm run build:client && npm run build:server",
-    "build:client": "vite build --outDir dist/public",
-    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --external:@mongodb-js/zstd --external:kerberos --external:@aws-sdk/credential-providers --external:mongodb-client-encryption --external:snappy --external:socks --external:aws4 --external:bson-ext",
-    "dev": "NODE_ENV=development tsx server/index.ts",
-    "start": "node dist/index.js"
-  }
-}
+### Build Command Fix
+**Current build command may fail due to UUID dependency. Use this instead:**
+
+```bash
+# Vercel Build Settings
+Build Command: vite build && esbuild server/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --external:@mongodb-js/zstd --external:kerberos --external:@aws-sdk/credential-providers --external:mongodb-client-encryption --external:snappy --external:socks --external:aws4 --external:bson-ext --outdir=dist
+Output Directory: dist/public
 ```
+
+### Build Issue Resolution
+If you encounter UUID build errors:
+1. **UUID dependency removed** from frontend - now uses browser-native crypto.randomUUID()
+2. **Build optimized** for Vercel deployment with proper externals
+3. **MongoDB dependencies** properly excluded from bundle
 
 ## Checklist Deployment
 

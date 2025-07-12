@@ -16,7 +16,7 @@ git push origin main
 ## Step 3: Configure Build
 ```
 Framework: Other
-Build Command: npm run build
+Build Command: vite build && esbuild server/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --external:@mongodb-js/zstd --external:kerberos --external:@aws-sdk/credential-providers --external:mongodb-client-encryption --external:snappy --external:socks --external:aws4 --external:bson-ext
 Output Directory: dist/public
 ```
 
