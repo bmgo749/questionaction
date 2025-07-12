@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "server/index.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["server/**", "shared/**"]
+      }
     },
     {
       "src": "package.json",
@@ -37,6 +40,7 @@
     "DISCORD_CLIENT_SECRET": "RuT-QizmyKCAJ_eaUyPEJActwst8Ws32",
     "EMAIL_USER": "bmgobmgo749@gmail.com",
     "email_pass": "uxujqtkuhldurifo",
-    "DEPLOYMENT_DOMAIN": "https://queit.site"
+    "DEPLOYMENT_DOMAIN": "https://queit.site",
+    "VERCEL_URL": "https://queit-two.vercel.app"
   }
 }
