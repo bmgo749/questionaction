@@ -45,7 +45,7 @@ Jika masih gagal, coba:
 
 #### Opsi A: Buat App Password baru dengan nama berbeda
 1. Hapus App Password lama di Google Account
-2. Buat App Password baru dengan nama "QuestionAction-Email"
+2. Buat App Password baru dengan nama "Queit-Email"
 3. Update semua konfigurasi dengan password baru
 
 #### Opsi B: Gunakan akun Gmail berbeda

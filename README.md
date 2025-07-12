@@ -1,4 +1,4 @@
-# QuestionAction
+# Queit
 
 A comprehensive multilingual knowledge platform with user authentication, article creation, and community engagement features.
 
@@ -39,7 +39,7 @@ A comprehensive multilingual knowledge platform with user authentication, articl
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd questionaction
+   cd queit
    ```
 
 2. **Install dependencies**

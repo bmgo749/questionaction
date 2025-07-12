@@ -31,7 +31,7 @@
 - ✅ Project ID: `prj_sPnN4A76B6NnWF8DaUmahsQimNX7`
 
 ### Database Connection
-- ✅ PostgreSQL DigitalOcean: `postgresql://questionaction_user:strong_password_123@db-postgresql-sgp1-47891-do-user-16486936-0.c.db.ondigitalocean.com:25060/questionaction_db?sslmode=require`
+- ✅ PostgreSQL DigitalOcean: `postgresql://queit_user:strong_password_123@db-postgresql-sgp1-47891-do-user-16486936-0.c.db.ondigitalocean.com:25060/queit_db?sslmode=require`
 
 ## ✅ Configuration Summary
 

@@ -1,7 +1,7 @@
 // Global deployment configuration - No secrets required
 module.exports = {
   database: {
-    url: 'postgresql://questionaction_user:strong_password_123@db-postgresql-sgp1-47891-do-user-16486936-0.c.db.ondigitalocean.com:25060/questionaction_db?sslmode=require',
+    url: 'postgresql://queit_user:strong_password_123@db-postgresql-sgp1-47891-do-user-16486936-0.c.db.ondigitalocean.com:25060/queit_db?sslmode=require',
     ssl: true,
     global: true
   },
@@ -11,7 +11,7 @@ module.exports = {
   oauth: {
     google: {
       clientId: '693608051666-kpemam0j804vf5fl8v2h1edg8jgjh3g5.apps.googleusercontent.com',
-      clientSecret: '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'
+      clientSecret: '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'
     },
     discord: {
       clientId: '1344311791177564202',
