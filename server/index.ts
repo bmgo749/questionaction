@@ -1,7 +1,29 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic, log } from "./vite";
+// Conditional imports for development vs production
+let setupVite: any, serveStatic: any, log: any;
+
+try {
+  if (process.env.NODE_ENV === "development") {
+    // Import vite for development
+    const viteModule = await import("./vite.js");
+    setupVite = viteModule.setupVite;
+    serveStatic = viteModule.serveStatic;
+    log = viteModule.log;
+  } else {
+    // Import production functions for deployment
+    const prodModule = await import("./production.js");
+    serveStatic = prodModule.serveStatic;
+    log = prodModule.log;
+  }
+} catch (error) {
+  console.warn("Failed to import vite module, using production fallback:", error);
+  // Fallback for production when vite is not available
+  const prodModule = await import("./production.js");
+  serveStatic = prodModule.serveStatic;
+  log = prodModule.log;
+}
 
 const app = express();
 app.use(express.json());

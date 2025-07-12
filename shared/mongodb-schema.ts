@@ -1,27 +1,30 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { z } from 'zod';
 
-// User Schema
+// User Schema - aligned with PostgreSQL schema
 export interface User extends Document {
   id: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  username?: string;
-  aliasName?: string;
-  profileImageUrl?: string;
-  password?: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  aliasName?: string | null;
+  profileImageUrl?: string | null;
+  password?: string | null;
   provider: string;
   fame: number;
   honourLevel: number;
   isVerified: boolean;
-  verificationCode?: string;
-  verificationCodeExpiry?: Date;
-  resetToken?: string;
-  resetTokenExpiry?: Date;
-  iqScore?: number;
+  isVerifiedCheckmark: boolean; // Blue checkmark for 500+ honour
+  verificationCode?: string | null;
+  verificationCodeExpiry?: Date | null;
+  resetToken?: string | null;
+  resetTokenExpiry?: Date | null;
+  iqScore?: number | null;
   iqTestTaken: boolean;
-  description?: string;
+  iqTestDate?: Date | null;
+  allowNsfw: boolean;
+  description?: string | null;
   // Membership badges
   isFree: boolean;
   isTopaz: boolean;
@@ -38,10 +41,10 @@ export interface User extends Document {
   // Database plans
   databasePlan: string; // 'free', 'basic', 'inter', 'pro'
   selectedTheme: string;
-  currentGuildId?: number; // ID of the guild the user is currently in
-  currentGuildName?: string; // Name of the guild for display
-  createdAt: Date;
-  updatedAt: Date;
+  currentGuildId?: number | null; // ID of the guild the user is currently in
+  currentGuildName?: string | null; // Name of the guild for display
+  createdAt: Date | null;
+  updatedAt: Date | null;
 }
 
 const userSchema = new Schema<User>({
@@ -57,12 +60,15 @@ const userSchema = new Schema<User>({
   fame: { type: Number, default: 0 },
   honourLevel: { type: Number, default: 0 },
   isVerified: { type: Boolean, default: false },
+  isVerifiedCheckmark: { type: Boolean, default: false },
   verificationCode: String,
   verificationCodeExpiry: Date,
   resetToken: String,
   resetTokenExpiry: Date,
   iqScore: Number,
   iqTestTaken: { type: Boolean, default: false },
+  iqTestDate: Date,
+  allowNsfw: { type: Boolean, default: false },
   description: String,
   // Membership badges
   isFree: { type: Boolean, default: true },

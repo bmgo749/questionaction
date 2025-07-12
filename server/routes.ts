@@ -86,11 +86,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.path === '/v2/' && !req.url.includes('/api/')) {
       // Rate limiting disabled - using Cloudflare for traffic management
       const ip = getClientIP(req);
-      
+
       // Security validation
       if (req.query.code && typeof req.query.code === 'string') {
         const codeParam = req.query.code as string;
-        
+
         // Block SQL injection attempts - more specific detection
         const sqlInjectionPatterns = [
           /\-\-/,
@@ -100,13 +100,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           /\bAND\b.*\d+=\d+/i,
           /\bSELECT\b.*\bFROM\b/i
         ];
-        
+
         const isMalicious = sqlInjectionPatterns.some(pattern => pattern.test(codeParam));
         if (isMalicious) {
           console.log(`🚫 Blocked malicious v2 request: ${codeParam.substring(0, 50)}...`);
           return res.status(400).json({ error: 'Invalid request format' });
         }
-        
+
         // Check if using new format with hash (errorCode present)
         if (req.query.errorCode) {
           // New format: /v2/?code=abc&errorCode=xyz#path
@@ -129,16 +129,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize MongoDB connection first
   console.log('🔄 Initializing MongoDB connection...');
   let mongoUri: string;
-  
+
   try {
     mongoUri = await connectToMongoDB();
     console.log('✅ MongoDB connection established');
-    
+
     // Create test user account for development
     console.log('🔄 Creating test user account...');
     const testEmail = 'mellyaldenangela@gmail.com';
     const existingUser = await storage.getUserByEmail(testEmail);
-    
+
     if (!existingUser) {
       const testPassword = await hashPassword('123456');
       await storage.createUser({
@@ -151,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verificationCode: '123456',
         verificationCodeExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
       });
-      
+
       // Verify the user immediately
       await storage.verifyUser(testEmail, '123456');
       console.log('✅ Test user account created and verified:', testEmail);
@@ -163,13 +163,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('🔄 Continuing with memory store fallback...');
     mongoUri = '';
   }
-  
+
   // Setup session management
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  
+
   // Set up session store
   let sessionStore: any;
-  
+
   try {
     if (mongoUri && mongoose.connection.readyState === 1) {
       // Use existing MongoDB connection for sessions
@@ -179,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         collectionName: 'sessions',
         touchAfter: 24 * 3600 // lazy session update
       });
-      
+
       console.log('✅ Using MongoDB store for sessions');
     } else {
       throw new Error('MongoDB connection not available');
@@ -226,16 +226,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve uploaded files statically
   app.use('/uploads', express.static(uploadsDir));
-  
+
   // Configure nodemailer for email sending - NO SECRETS REQUIRED
   let transporter: any = undefined;
   const EMAIL_USER = 'bmgobmgo749@gmail.com';
   const EMAIL_PASS = 'uxujqtkuhldurifo';
-  
+
   console.log('Configuring email with user:', EMAIL_USER);
   console.log('App Password length:', EMAIL_PASS.length);
   console.log('App Password (first 4 chars):', EMAIL_PASS.substring(0, 4));
-    
+
     try {
       // Create transporter for Gmail with App Password
       transporter = nodemailer.createTransport({
@@ -249,9 +249,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxConnections: 5,
         maxMessages: 100
       });
-      
+
       console.log('Email transporter created successfully');
-      
+
       // Test connection immediately
       transporter.verify((error: any, success: any) => {
         if (error) {
@@ -274,35 +274,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Email transporter creation error:', error);
     }
-  
+
   console.log('Email system configured with hardcoded credentials - NO SECRETS NEEDED');
 
   // Authentication routes - HARDCODED OAuth credentials, NO SECRETS NEEDED
   const GOOGLE_CLIENT_ID = '693608051666-kpemam0j804vf5fl8v2h1edg8jgjh3g5.apps.googleusercontent.com';
   const GOOGLE_CLIENT_SECRET = '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';
-  
+
   if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
     app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-    
+
     app.get('/api/auth/google/callback',
       passport.authenticate('google', { failureRedirect: '/auth' }),
       async (req, res) => {
         const user = req.user as any;
-        
+
         // Set session userId for all authenticated users
         if (user) {
           req.session.userId = user.id;
         }
-        
+
         // Check if user needs verification
         if (user && !user.isVerified) {
           // Generate verification code and send email
           const verificationCode = generateVerificationCode();
           const verificationCodeExpiry = generateVerificationCodeExpiry();
-          
+
           // Update user with verification code
           await storage.updateUserVerification(user.id, verificationCode, verificationCodeExpiry);
-          
+
           // Send verification email
           if (user.email && transporter) {
             try {
@@ -323,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.error('Failed to send verification email:', error);
             }
           }
-          
+
           // Redirect to auth page with verification needed
           res.redirect('/auth?needsVerification=true&email=' + encodeURIComponent(user.email));
         } else {
@@ -337,29 +337,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Discord OAuth - HARDCODED credentials, NO SECRETS NEEDED
   const DISCORD_CLIENT_ID = '1344311791177564202';
   const DISCORD_CLIENT_SECRET = 'RuT-QizmyKCAJ_eaUyPEJActwst8Ws32';
-  
+
   if (DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET) {
     app.get('/api/auth/discord', passport.authenticate('discord'));
-    
+
     app.get('/api/auth/discord/callback',
       passport.authenticate('discord', { failureRedirect: '/auth' }),
       async (req, res) => {
         const user = req.user as any;
-        
+
         // Set session userId for all authenticated users
         if (user) {
           req.session.userId = user.id;
         }
-        
+
         // Check if user needs verification
         if (user && !user.isVerified) {
           // Generate verification code and send email
           const verificationCode = generateVerificationCode();
           const verificationCodeExpiry = generateVerificationCodeExpiry();
-          
+
           // Update user with verification code
           await storage.updateUserVerification(user.id, verificationCode, verificationCodeExpiry);
-          
+
           // Send verification email
           if (user.email && transporter) {
             try {
@@ -380,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.error('Failed to send verification email:', error);
             }
           }
-          
+
           // Redirect to auth page with verification needed
           res.redirect('/auth?needsVerification=true&email=' + encodeURIComponent(user.email));
         } else {
@@ -394,7 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Discord OAuth callback handler for root path (production)
   app.get('/', async (req, res, next) => {
     const { code } = req.query;
-    
+
     // Only handle if there's a code parameter (Discord OAuth callback)
     if (code && typeof code === 'string') {
       try {
@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Discord OAuth callback handler for development
   app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
-    
+
     if (code && typeof code === 'string') {
       try {
         // Exchange authorization code for access token
@@ -496,7 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const tokenData = await tokenResponse.json();
-        
+
         // Get user info from Discord
         const userResponse = await fetch('https://discord.com/api/users/@me', {
           headers: {
@@ -509,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const discordUser = await userResponse.json();
-        
+
         // Create or update user in database
         const userData = {
           id: `discord_${discordUser.id}`,
@@ -521,23 +521,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
 
         const user = await storage.upsertUser(userData);
-        
+
         // Log user in
         req.login(user, (err) => {
           if (err) {
             console.error('Login error:', err);
             return res.redirect('/auth?error=login_failed');
           }
-          
+
           // Check if user needs verification
           if (!user.isVerified) {
             // Generate verification code and send email
             const verificationCode = generateVerificationCode();
             const verificationCodeExpiry = generateVerificationCodeExpiry();
-            
+
             // Update user with verification code
             storage.updateUserVerification(user.id, verificationCode, verificationCodeExpiry);
-            
+
             // Send verification email
             if (user.email && transporter) {
               transporter.sendMail({
@@ -554,7 +554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 `,
               }).catch(console.error);
             }
-            
+
             // Redirect to auth page with verification needed
             const emailParam = user.email ? encodeURIComponent(user.email) : '';
             res.redirect('/auth?needsVerification=true&email=' + emailParam);
@@ -563,7 +563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             res.redirect('/v2/?code=AUTH_SUCCESS&errorCode=LOGIN#auth');
           }
         });
-        
+
       } catch (error) {
         console.error('Discord OAuth error:', error);
         res.redirect('/auth?error=oauth_failed');
@@ -584,11 +584,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    
+
     if (req.isAuthenticated() && req.user) {
       // Set session.userId for profile routes
       req.session.userId = (req.user as any).id;
-      
+
       // Get fresh user data from database
       try {
         const freshUser = await storage.getUser((req.user as any).id);
@@ -612,7 +612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Testing email configuration...');
       console.log('EMAIL_USER:', CONFIG.EMAIL_USER);
       console.log('EMAIL_PASS:', CONFIG.EMAIL_PASS ? 'Set' : 'Not set');
-      
+
       if (!transporter) {
         return res.status(500).json({ 
           message: 'Email service not configured. Kemungkinan masalah dengan App Password Gmail.',
@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/signup', async (req, res) => {
     try {
       const validatedData = signUpSchema.parse(req.body);
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(validatedData.email);
       if (existingUser) {
@@ -743,7 +743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/signin', async (req, res) => {
     try {
       const validatedData = signInSchema.parse(req.body);
-      
+
       // Find user by email
       const user = await storage.getUserByEmail(validatedData.email);
       if (!user) {
@@ -781,7 +781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/verify', async (req, res) => {
     try {
       const { code, email } = req.body;
-      
+
       const isVerified = await storage.verifyUser(email, code);
       if (isVerified) {
         res.json({ message: 'Verification successful' });
@@ -797,7 +797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/resend-verification', async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(400).json({ message: 'User not found' });
@@ -842,7 +842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/forgot-password', async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ message: 'Email is required' });
       }
@@ -863,7 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send reset email
       if (transporter) {
         const resetUrl = `${CONFIG.DEPLOYMENT_DOMAIN}/reset-password?token=${resetToken}`;
-        
+
         await transporter.sendMail({
           from: CONFIG.EMAIL_USER,
           to: email,
@@ -896,7 +896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/reset-password', async (req, res) => {
     try {
       const { token, newPassword } = req.body;
-      
+
       if (!token || !newPassword) {
         return res.status(400).json({ message: 'Token and new password are required' });
       }
@@ -928,13 +928,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to reset password' });
     }
   });
-  
+
   // Visitor tracking middleware
   app.use(async (req, res, next) => {
     try {
       const userIp = req.ip || req.connection.remoteAddress || '127.0.0.1';
       const userAgent = req.get('User-Agent') || '';
-      
+
       // Track visitor asynchronously only if MongoDB is connected
       if (mongoose.connection.readyState === 1) {
         storage.trackVisitor({ ipAddress: userIp, userAgent }).catch(err => {
@@ -949,15 +949,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rate limiting disabled - using Cloudflare for traffic management
   // No rate limiting middleware applied
-  
+
   // API routes for the wiki application
-  
+
   // Get stats (categories, articles, visitors)
   app.get("/api/stats", async (req, res) => {
     try {
       const totalVisitors = await storage.getTotalVisitors();
       const articles = await storage.getAllArticles();
-      
+
       res.json({
         categories: 11, // 10 + Space & Astronomy
         articles: articles.length,
@@ -968,7 +968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
-  
+
   // Get all categories
   app.get("/api/categories", async (req, res) => {
     try {
@@ -985,7 +985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { id: 'health', name: 'Health', slug: 'health', icon: 'heartbeat', color: 'emerald-600', articleCount: 1345 },
         { id: 'education', name: 'Education', slug: 'education', icon: 'graduation-cap', color: 'orange-600', articleCount: 987 },
       ];
-      
+
       res.json(categories);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch categories" });
@@ -1007,7 +1007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/categories/:slug", async (req, res) => {
     try {
       const { slug } = req.params;
-      
+
       // In a real app, this would fetch from database
       const categories = [
         { id: 'world', name: 'World', slug: 'world', icon: 'globe', color: 'blue-600', articleCount: 847 },
@@ -1021,13 +1021,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { id: 'health', name: 'Health', slug: 'health', icon: 'heartbeat', color: 'emerald-600', articleCount: 1345 },
         { id: 'education', name: 'Education', slug: 'education', icon: 'graduation-cap', color: 'orange-600', articleCount: 987 },
       ];
-      
+
       const category = categories.find(cat => cat.slug === slug);
-      
+
       if (!category) {
         return res.status(404).json({ message: "Category not found" });
       }
-      
+
       res.json(category);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch category" });
@@ -1040,7 +1040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { slug } = req.params;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 12;
-      
+
       // In a real app, this would fetch from database with pagination
       const mockArticles = Array.from({ length: limit }, (_, i) => ({
         id: (page - 1) * limit + i + 1,
@@ -1052,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date().toISOString(),
         author: `Author ${Math.floor(Math.random() * 10) + 1}`,
       }));
-      
+
       res.json({
         articles: mockArticles,
         pagination: {
@@ -1071,21 +1071,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recent-updates", async (req, res) => {
     try {
       const allArticles = await storage.getAllArticles();
-      
+
       // Get top 2 trending articles overall
       const topArticles = allArticles
         .sort((a, b) => b.likes - a.likes)
         .slice(0, 2);
-      
+
       // Resolve author IDs to display names and clean up the data
       const articlesWithAuthors = await Promise.all(topArticles.map(async (article) => {
         try {
           const user = await storage.getUser(article.author);
           const displayName = user ? `${user.firstName} ${user.lastName}` : 'Anonymous User';
-          
+
           // Convert Mongoose document to plain object and clean up
           const cleanArticle = article.toObject ? article.toObject() : article;
-          
+
           return {
             id: cleanArticle.id,
             title: cleanArticle.title,
@@ -1122,7 +1122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       }));
-      
+
       res.json(articlesWithAuthors);
     } catch (error) {
       console.error('Recent updates error:', error);
@@ -1136,7 +1136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       const fileUrl = `/uploads/${req.file.filename}`;
       res.json({ url: fileUrl });
     } catch (error) {
@@ -1173,7 +1173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       const fileUrl = `/uploads/${req.file.filename}`;
       res.json({ url: fileUrl });
     } catch (error) {
@@ -1191,7 +1191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = updateProfileSchema.parse(req.body);
       const updatedUser = await storage.updateUserProfile(req.session.userId, validatedData);
-      
+
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -1204,7 +1204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -1235,7 +1235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Article Routes
-  
+
   // Create new article - REQUIRE AUTHENTICATION
   app.post("/api/articles", async (req, res) => {
     try {
@@ -1248,13 +1248,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let articleData = req.body;
-      
+
       // Set authenticated user as the author
       articleData = {
         ...articleData,
         author: req.session.userId,
       };
-      
+
       // Verify and auto-correct categories based on content analysis
       if (articleData.title && articleData.content && articleData.categories) {
         const categoryCorrection = autoCorrectCategories(
@@ -1262,22 +1262,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           articleData.content,
           articleData.categories
         );
-        
+
         // Update categories if they were auto-corrected
         if (categoryCorrection.wasChanged) {
           articleData.categories = categoryCorrection.correctedCategories;
           console.log(`Article categories auto-corrected: ${categoryCorrection.explanation}`);
         }
       }
-      
+
       const validatedData = insertArticleSchema.parse(articleData);
       const article = await storage.createArticle(validatedData);
-      
+
       // Award 0.1 honour for creating an article
       if (req.session.userId) {
         await storage.updateUserHonour(req.session.userId, 0.1);
       }
-      
+
       // Return the article with information about category changes if any
       const response = {
         ...article,
@@ -1285,7 +1285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           autoCorrectCategories(articleData.title, articleData.content, articleData.categories) : 
           undefined
       };
-      
+
       res.status(201).json(response);
     } catch (error) {
       console.error("Error creating article:", error);
@@ -1346,7 +1346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { userId, badges } = req.body;
-      
+
       // Check if current user is admin/staff (you can implement proper admin check)
       const currentUser = await storage.getUser(req.session.userId);
       if (!currentUser?.isStaff && !currentUser?.isDeveloper) {
@@ -1382,11 +1382,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .replace(/javascript:/gi, '') // Remove JS protocol
         .replace(/data:/gi, '') // Remove data protocol
         .trim();
-      
+
       if (sanitizedQuery.length < 2) {
         return res.status(400).json({ message: "Search query must be at least 2 characters" });
       }
-      
+
       if (sanitizedQuery.length > 50) { // Reduced from 100
         return res.status(400).json({ message: "Search query too long" });
       }
@@ -1401,7 +1401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const allArticles = await storage.getAllArticles();
       const searchTerm = sanitizedQuery.toLowerCase();
-      
+
       const filteredArticles = allArticles.filter(article => {
         return (
           article.title.toLowerCase().includes(searchTerm) ||
@@ -1437,17 +1437,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPosts = await storage.getAllPagePosts();
       const searchTerm = sanitizedQuery.toLowerCase();
       const showNsfw = includeNsfw === 'true';
-      
+
       const filteredPosts = allPosts.filter(post => {
         // Filter NSFW content unless explicitly requested
         if (post.isNsfw && !showNsfw) {
           return false;
         }
-        
+
         const hasHashtagMatch = post.hashtags?.some(hashtag => 
           hashtag.toLowerCase().includes(searchTerm)
         );
-        
+
         return (
           (post.title && post.title.toLowerCase().includes(searchTerm)) ||
           post.content.toLowerCase().includes(searchTerm) ||
@@ -1481,16 +1481,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { hideNsfw } = req.query;
       const allPosts = await storage.getAllPagePosts();
-      
+
       // Extract all hashtags from posts
       const hashtagCounts = new Map<string, number>();
-      
+
       allPosts.forEach(post => {
         // Skip NSFW posts if hideNsfw is true
         if (hideNsfw === 'true' && post.isNsfw) {
           return;
         }
-        
+
         if (post.hashtags && Array.isArray(post.hashtags)) {
           post.hashtags.forEach(hashtag => {
             const normalizedTag = hashtag.toLowerCase();
@@ -1498,13 +1498,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       });
-      
+
       // Convert to array and sort by popularity
       const popularHashtags = Array.from(hashtagCounts.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20) // Top 20 popular hashtags
         .map(([hashtag, count]) => ({ hashtag, count }));
-      
+
       res.json(popularHashtags);
     } catch (error) {
       console.error("Error fetching popular hashtags:", error);
@@ -1516,12 +1516,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/articles/trending", async (req, res) => {
     try {
       const allArticles = await storage.getAllArticles();
-      
+
       // Sort articles by likes count (descending) and take top 20
       const trendingArticles = allArticles
         .sort((a, b) => b.likes - a.likes)
         .slice(0, 20);
-      
+
       res.json(trendingArticles);
     } catch (error) {
       console.error("Error fetching trending articles:", error);
@@ -1534,13 +1534,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { category } = req.params;
       const allArticles = await storage.getAllArticles();
-      
+
       // Filter by category and sort by likes, take top 2
       const topArticles = allArticles
         .filter(article => article.categories && article.categories.includes(category))
         .sort((a, b) => b.likes - a.likes)
         .slice(0, 2);
-      
+
       // Resolve author IDs to display names
       const articlesWithAuthors = await Promise.all(topArticles.map(async (article) => {
         try {
@@ -1557,7 +1557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       }));
-      
+
       res.json(articlesWithAuthors);
     } catch (error) {
       console.error("Error fetching trending articles by category:", error);
@@ -1569,12 +1569,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/page-posts/trending", async (req, res) => {
     try {
       const allPagePosts = await storage.getAllPagePosts();
-      
+
       // Sort page posts by likes count (descending) and take top 20
       const trendingPagePosts = allPagePosts
         .sort((a, b) => b.likes - a.likes)
         .slice(0, 20);
-      
+
       res.json(trendingPagePosts);
     } catch (error) {
       console.error("Error fetching trending page posts:", error);
@@ -1624,13 +1624,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const articleId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       let commentData = { 
         ...req.body, 
         articleId,
         userIp
       };
-      
+
       // If user is authenticated, get their profile info
       if (req.session.userId) {
         const user = await storage.getUser(req.session.userId);
@@ -1653,7 +1653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         commentData.author = userIp;
         commentData.authorName = req.body.author || 'Anonymous User';
       }
-      
+
       const comment = await storage.createComment(commentData);
       res.status(201).json(comment);
     } catch (error) {
@@ -1668,10 +1668,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const articleId = parseInt(req.params.id);
       const { isLike } = req.body;
       const userIp = getClientIP(req);
-      
+
       // Check if user already has a like/dislike for this article
       const existingLike = await storage.getUserLike(articleId, userIp);
-      
+
       // STRICT RATE LIMITING: Only allow one like/dislike per IP per article
       if (existingLike) {
         // If user clicks the same button they already clicked, remove it
@@ -1697,7 +1697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get updated like counts
       const { likes, dislikes } = await storage.getArticleLikeCounts(articleId);
-      
+
       // Update article stats
       await storage.updateArticleStats(articleId, likes, dislikes);
 
@@ -1706,7 +1706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (article && article.author) {
         // Get user by author name (assuming author is user ID for now)
         let honourIncrement = 0;
-        
+
         if (likes >= 10000) {
           // Every 10k likes gets additional honour
           const tensOfThousands = Math.floor(likes / 10000);
@@ -1716,7 +1716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (likes >= 100) {
           honourIncrement = 1; // 100+ likes = 1 honour
         }
-        
+
         if (honourIncrement > 0) {
           try {
             await storage.updateUserHonour(article.author, honourIncrement);
@@ -1738,7 +1738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const articleId = parseInt(req.params.id);
       const userIp = req.ip || req.connection.remoteAddress || "unknown";
-      
+
       const favorite = await storage.createOrRemoveFavorite({
         articleId,
         userIp
@@ -1755,10 +1755,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const articleId = parseInt(req.params.id);
       const userIp = req.ip || req.connection.remoteAddress || "unknown";
-      
+
       const like = await storage.getUserLike(articleId, userIp);
       const favorite = await storage.getUserFavorite(articleId, userIp);
-      
+
       res.json({
         isLiked: like?.isLike === true,
         isDisliked: like?.isLike === false,
@@ -1770,16 +1770,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Database Management API Endpoints
-  
+
   // Delete all database data for a user
   app.delete("/api/database/all", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      
+
       const success = await storage.deleteAllDatabaseData(req.session.userId);
-      
+
       if (success) {
         res.json({ message: "All database data deleted successfully" });
       } else {
@@ -1790,17 +1790,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete database data" });
     }
   });
-  
+
   // Delete specific IP access from user's database
   app.delete("/api/database/ip/:ipAddress", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      
+
       const { ipAddress } = req.params;
       const success = await storage.deleteUserIPAccess(req.session.userId, ipAddress);
-      
+
       if (success) {
         res.json({ message: "IP access deleted successfully" });
       } else {
@@ -1811,17 +1811,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete IP access" });
     }
   });
-  
+
   // Delete authorized user from database
   app.delete("/api/database/user/:targetUserId", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      
+
       const { targetUserId } = req.params;
       const success = await storage.deleteAuthorizedUser(req.session.userId, targetUserId);
-      
+
       if (success) {
         res.json({ message: "Authorized user deleted successfully" });
       } else {
@@ -1832,17 +1832,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete authorized user" });
     }
   });
-  
+
   // Delete article (author only)
   app.delete("/api/articles/:id", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      
+
       const articleId = parseInt(req.params.id);
       const success = await storage.deleteArticle(articleId, req.session.userId);
-      
+
       if (success) {
         res.json({ message: "Article deleted successfully" });
       } else {
@@ -1853,17 +1853,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete article" });
     }
   });
-  
+
   // Delete page post (author only)
   app.delete("/api/page-posts/:id", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      
+
       const postId = parseInt(req.params.id);
       const success = await storage.deletePagePost(postId, req.session.userId);
-      
+
       if (success) {
         res.json({ message: "Page post deleted successfully" });
       } else {
@@ -1912,7 +1912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       <body>
         <div class="container">
           <h1>🚀 Queit API Documentation</h1>
-          
+
           <div class="nav">
             <a href="#overview">Overview</a>
             <a href="#authentication">Authentication</a>
@@ -1935,7 +1935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <section id="authentication">
             <h2>🔐 Authentication</h2>
             <p>Authentication is session-based. Users must login to access protected endpoints.</p>
-            
+
             <div class="endpoint">
               <span class="method post">POST</span>
               <strong>/api/auth/signin</strong>
@@ -1969,7 +1969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           <section id="articles">
             <h2>📖 Articles</h2>
-            
+
             <div class="endpoint">
               <span class="method get">GET</span>
               <strong>/api/articles</strong>
@@ -2054,7 +2054,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           <section id="comments">
             <h2>💬 Comments</h2>
-            
+
             <div class="endpoint">
               <span class="method get">GET</span>
               <strong>/api/articles/:id/comments</strong>
@@ -2081,7 +2081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           <section id="users">
             <h2>👥 Users</h2>
-            
+
             <div class="endpoint">
               <span class="method get">GET</span>
               <strong>/api/auth/me</strong> 🔒
@@ -2115,7 +2115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           <section id="page-posts">
             <h2>📱 Page Posts (Social Media)</h2>
-            
+
             <div class="endpoint">
               <span class="method get">GET</span>
               <strong>/api/page-posts</strong>
@@ -2215,7 +2215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Comment Routes
-  
+
   // Create comment
   app.post("/api/comments", async (req, res) => {
     try {
@@ -2244,7 +2244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
-  
+
   // WebSocket server for real-time online user tracking with stability improvements
   const wss = new WebSocketServer({ 
     server: httpServer, 
@@ -2252,24 +2252,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     clientTracking: true,
     perMessageDeflate: false // Disable compression for stability
   });
-  
+
   let onlineUsers = 0;
-  
+
   wss.on('connection', (ws, req) => {
     onlineUsers++;
     console.log(`User connected. Online users: ${onlineUsers}`);
-    
+
     // Set up ping/pong for connection health
     const pingInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.ping();
       }
     }, 30000);
-    
+
     ws.on('pong', () => {
       // Connection is alive
     });
-    
+
     // Broadcast updated count to all connected clients
     const broadcastCount = () => {
       const message = JSON.stringify({ type: 'online_count', count: Math.max(1, onlineUsers) });
@@ -2283,29 +2283,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     };
-    
+
     broadcastCount();
-    
+
     ws.on('close', () => {
       clearInterval(pingInterval);
       onlineUsers = Math.max(0, onlineUsers - 1);
       console.log(`User disconnected. Online users: ${onlineUsers}`);
       broadcastCount();
     });
-    
+
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
       clearInterval(pingInterval);
     });
   });
-  
+
   // API endpoint to get current online users count - simplified to show 1 user
   app.get("/api/online", (req, res) => {
     res.json({ count: 1 });
   });
 
   // =============== POST API ROUTES ===============
-  
+
   // Get all posts
   app.get("/api/posts", async (req, res) => {
     try {
@@ -2337,24 +2337,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userIp = getClientIP(req);
       const user = req.session.userId ? await storage.getUser(req.session.userId) : null;
-      
+
       let postData = req.body;
-      
+
       // Handle uploaded image
       if (req.file) {
         postData.imageUrl = `/uploads/${req.file.filename}`;
       }
-      
+
       // Set author information
       postData.authorId = user?.id || null;
       postData.authorName = user ? `${user.firstName} ${user.lastName}` : 'Anonymous User';
       postData.authorIp = userIp;
       postData.author = user?.id || 'Anonymous';
       postData.userIp = userIp;
-      
+      postData.content = postData.content || ''; // Ensure content is not null/undefined
+
       const validatedData = insertPostSchema.parse(postData);
       const post = await storage.createPost(validatedData);
-      
+
       res.status(201).json(post);
     } catch (error) {
       console.error("Error creating post:", error);
@@ -2368,20 +2369,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
       const { type } = req.body; // 'like' or 'dislike'
-      
+
       const likeData = {
         postId,
         userIp,
         userId: req.session.userId || null,
         isLike: type === 'like'
       };
-      
+
       const validatedData = insertPostLikeSchema.parse(likeData);
       await storage.createOrUpdatePostLike(validatedData);
-      
+
       // Get updated counts
       const counts = await storage.getPostLikeCounts(postId);
-      
+
       // Update post stats
       await storage.updatePostStats(
         postId, 
@@ -2391,7 +2392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         0, // downloads count will be updated separately
         0  // reposts count will be updated separately
       );
-      
+
       res.json(counts);
     } catch (error) {
       console.error("Error updating post like:", error);
@@ -2404,12 +2405,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       await storage.removePostLike(postId, userIp);
-      
+
       // Get updated counts
       const counts = await storage.getPostLikeCounts(postId);
-      
+
       // Update post stats
       await storage.updatePostStats(
         postId, 
@@ -2417,7 +2418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         counts.dislikes, 
         0, 0, 0
       );
-      
+
       res.json(counts);
     } catch (error) {
       console.error("Error removing post like:", error);
@@ -2430,10 +2431,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       const userLike = await storage.getUserPostLike(postId, userIp);
       const counts = await storage.getPostLikeCounts(postId);
-      
+
       res.json({
         userLike: userLike?.isLike ? 'like' : 'dislike',
         ...counts
@@ -2451,21 +2452,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userIp = getClientIP(req);
       const user = req.session.userId ? await storage.getUser(req.session.userId) : null;
       const visitor = await storage.getVisitorIqStatus(userIp);
-      
+
       const commentData = {
         postId,
         content: req.body.content,
-        authorId: user?.id || null,
         authorName: user ? `${user.firstName} ${user.lastName}` : 'Anonymous User',
         authorIp: userIp,
-        authorIq: null,
+        authorId: user?.id || null,
         author: user?.id || 'Anonymous',
         userIp: userIp,
+        authorIq: null,
       };
-      
+
       const validatedData = insertPostCommentSchema.parse(commentData);
       const comment = await storage.createPostComment(validatedData);
-      
+
       res.status(201).json(comment);
     } catch (error) {
       console.error("Error creating post comment:", error);
@@ -2490,19 +2491,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       const downloadData = {
         postId,
         userIp,
         userId: req.session.userId || null,
       };
-      
+
       const validatedData = insertPostDownloadSchema.parse(downloadData);
       await storage.trackPostDownload(validatedData);
-      
+
       // Get updated download count
       const downloadCount = await storage.getPostDownloadCount(postId);
-      
+
       // Update post stats
       const post = await storage.getPost(postId);
       if (post) {
@@ -2515,7 +2516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           post.reposts
         );
       }
-      
+
       res.json({ downloadCount });
     } catch (error) {
       console.error("Error tracking post download:", error);
@@ -2529,28 +2530,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const originalPostId = parseInt(req.params.id);
       const userIp = getClientIP(req);
       const user = req.session.userId ? await storage.getUser(req.session.userId) : null;
-      
+
       const originalPost = await storage.getPost(originalPostId);
       if (!originalPost) {
         return res.status(404).json({ message: "Original post not found" });
       }
-      
+
       const repostData = {
         type: originalPost.type,
         title: `Repost: ${originalPost.title}`,
         content: req.body.content || '', // Optional additional content
-        imageUrl: originalPost.imageUrl,
-        authorId: user?.id || null,
         authorName: user ? `${user.firstName} ${user.lastName}` : 'Anonymous User',
         authorIp: userIp,
-        originalPostId: originalPostId,
+        authorId: user?.id || null,
         author: user?.id || 'Anonymous',
         userIp: userIp,
+        imageUrl: originalPost.imageUrl || '',
+        originalPostId: originalPostId,
       };
-      
+
       const validatedData = insertPostSchema.parse(repostData);
       const repost = await storage.createPost(validatedData);
-      
+
       // Update original post repost count
       await storage.updatePostStats(
         originalPostId,
@@ -2560,7 +2561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         originalPost.downloads,
         originalPost.reposts + 1
       );
-      
+
       res.status(201).json(repost);
     } catch (error) {
       console.error("Error creating repost:", error);
@@ -2573,11 +2574,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const testEmail = 'mellyaldenangela@gmail.com';
       const existingUser = await storage.getUserByEmail(testEmail);
-      
+
       if (existingUser) {
         return res.json({ message: 'Test user already exists', user: existingUser });
       }
-      
+
       const testPassword = await hashPassword('123456');
       const testUser = await storage.createUser({
         id: 'test-user-melly',
@@ -2589,10 +2590,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verificationCode: '123456',
         verificationCodeExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
       });
-      
+
       // Verify the user immediately
       await storage.verifyUser(testEmail, '123456');
-      
+
       res.json({ message: 'Test user created successfully', user: testUser });
     } catch (error) {
       console.error('Error creating test user:', error);
@@ -2605,18 +2606,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       const post = await storage.getPost(postId);
       if (!post) {
         return res.status(404).json({ message: "Post not found" });
       }
-      
+
       // Check if user is the author
       const canDelete = post.author === req.session.userId || post.authorIp === userIp;
       if (!canDelete) {
         return res.status(403).json({ message: "You can only delete your own posts" });
       }
-      
+
       await storage.deletePost(postId);
       res.json({ message: "Post deleted successfully" });
     } catch (error) {
@@ -2631,13 +2632,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/page-posts", async (req, res) => {
     try {
       const allPosts = await storage.getAllPagePosts();
-      
+
       // Filter out NSFW posts from home page feed
       const { includeNsfw } = req.query;
       const posts = includeNsfw === 'true' 
         ? allPosts 
         : allPosts.filter(post => !post.isNsfw);
-      
+
       res.json(posts);
     } catch (error) {
       console.error("Error fetching page posts:", error);
@@ -2665,18 +2666,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.session.userId ? await storage.getUser(req.session.userId) : null;
       const userIp = getClientIP(req);
-      
+
       const postData = { ...req.body };
-      
+
       // Handle uploaded media (photos/videos)
       if (req.file) {
         postData.mediaUrl = `/uploads/${req.file.filename}`;
         postData.mediaType = req.file.mimetype.startsWith('image/') ? 'image' : 'video';
       }
-      
+
       // Set author information
       postData.authorId = user?.id || null;
-      
+
       if (user) {
         postData.authorName = `${user.firstName} ${user.lastName}`;
         postData.authorAlias = user.aliasName || null;
@@ -2695,9 +2696,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         postData.authorAlias = null;
         postData.authorProfileUrl = null;
       }
-      
+
       postData.authorIp = userIp;
-      
+
       // Convert string booleans to actual booleans
       if (typeof postData.isVotingEnabled === 'string') {
         postData.isVotingEnabled = postData.isVotingEnabled === 'true';
@@ -2705,22 +2706,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (typeof postData.isNsfw === 'string') {
         postData.isNsfw = postData.isNsfw === 'true';
       }
-      
+
       // Parse voting options if provided
       if (postData.votingOptions && typeof postData.votingOptions === 'string') {
         postData.votingOptions = JSON.parse(postData.votingOptions);
       }
-      
+
       // Parse hashtags if provided
       if (postData.hashtags && typeof postData.hashtags === 'string') {
         postData.hashtags = JSON.parse(postData.hashtags);
       }
-      
+
       // Ensure hashtags is an array with at least #pagefeed
       if (!postData.hashtags || !Array.isArray(postData.hashtags) || postData.hashtags.length === 0) {
         postData.hashtags = ['#pagefeed'];
       }
-      
+
       // Map the data to match MongoDB schema
       const pagePostData: any = {
         title: postData.title || '',
@@ -2741,7 +2742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const post = await storage.createPagePost(pagePostData);
-      
+
       res.status(201).json(post);
     } catch (error) {
       console.error("Error creating page post:", error);
@@ -2775,15 +2776,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
       const { isLike } = req.body; // true for like, false for dislike
-      
+
       // Only allow registered users to like/dislike
       if (!req.session.userId) {
         return res.status(401).json({ message: "Only registered users can like/dislike posts" });
       }
-      
+
       // Check if user already liked/disliked this post
       const existingLike = await storage.getUserPagePostLike(postId, userIp);
-      
+
       if (existingLike) {
         if (existingLike.isLike === Boolean(isLike)) {
           // Same action - remove the like/dislike
@@ -2800,21 +2801,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validatedData = insertPagePostLikeSchema.parse(likeData);
         await storage.createOrUpdatePagePostLike(validatedData);
       }
-      
+
       // Get updated counts
       const counts = await storage.getPagePostLikeCounts(postId);
-      
+
       // Update post stats - preserve current comment count
       const currentPost = await storage.getPagePost(postId);
       await storage.updatePagePostStats(postId, counts.likes, counts.dislikes, currentPost?.comments || 0);
-      
+
       // Award honour for likes (0.2 per like) - but NOT for NSFW posts
       const post = await storage.getPagePost(postId);
       if (post && post.authorId && isLike && !post.isNsfw) {
         await storage.updateUserHonour(post.authorId, 0.2);
         await storage.checkAndUpdateUserVerification(post.authorId);
       }
-      
+
       res.json({ likes: counts.likes, dislikes: counts.dislikes });
     } catch (error) {
       console.error("Error liking page post:", error);
@@ -2827,20 +2828,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       if (!req.session.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       await storage.removePagePostLike(postId, userIp);
-      
+
       // Get updated counts
       const counts = await storage.getPagePostLikeCounts(postId);
-      
+
       // Update post stats - preserve current comment count
       const currentPost = await storage.getPagePost(postId);
       await storage.updatePagePostStats(postId, counts.likes, counts.dislikes, currentPost?.comments || 0);
-      
+
       res.json({ likes: counts.likes, dislikes: counts.dislikes });
     } catch (error) {
       console.error("Error removing page post like:", error);
@@ -2853,9 +2854,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       const existingLike = await storage.getUserPagePostLike(postId, userIp);
-      
+
       res.json({
         isLiked: existingLike ? existingLike.isLike : false,
         isDisliked: existingLike ? !existingLike.isLike : false
@@ -2884,7 +2885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
       const user = req.session.userId ? await storage.getUser(req.session.userId) : null;
-      
+
       // Get visitor IQ if not registered user
       let authorIq = null;
       if (user && user.iqScore) {
@@ -2893,7 +2894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const visitorStatus = await storage.getVisitorIqStatus(userIp);
         authorIq = visitorStatus.iqScore;
       }
-      
+
       const commentData = {
         postId,
         authorId: user?.id || null,
@@ -2905,12 +2906,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: req.body.content,
         userIp: userIp // Add this field for MongoDB schema compatibility
       };
-      
+
       const validatedData = insertPagePostCommentSchema.parse(commentData);
       const comment = await storage.createPagePostComment(validatedData);
-      
+
       // Note: MongoDB storage automatically increments comment count in createPagePostComment
-      
+
       res.status(201).json(comment);
     } catch (error) {
       console.error("Error creating page post comment:", error);
@@ -2924,14 +2925,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
       const { option } = req.body;
-      
+
       if (!option || typeof option !== 'string') {
         return res.status(400).json({ 
           success: false, 
           message: "Valid vote option is required" 
         });
       }
-      
+
       // Sanitize option input
       const sanitizedOption = option.replace(/[<>'"&]/g, '').trim();
       if (sanitizedOption.length === 0) {
@@ -2940,34 +2941,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid vote option" 
         });
       }
-      
+
       // Get user info if authenticated
       const userId = req.session?.userId;
-      let userEmail;
-      
+      let userEmail: string | undefined;
+
       if (userId) {
         try {
           const user = await storage.getUser(userId);
-          userEmail = user?.email;
+          userEmail = user?.email || undefined;
         } catch (error) {
           console.error("Error getting user for vote:", error);
+          userEmail = undefined;
         }
       }
-      
+
       // ATOMIC OPERATION - Use MongoDB transaction to prevent race condition
       const session = await mongoose.startSession();
-      
+
       try {
         await session.withTransaction(async () => {
           // Check if user has already voted for this option
           const existingVote = await storage.getUserPagePostVote(postId, userIp);
-          
+
           if (existingVote && existingVote.option === sanitizedOption) {
             // User clicked the same option - remove their vote
             await storage.removePagePostVote(postId, userIp);
             return;
           }
-          
+
           const voteData = {
             postId,
             userIp,
@@ -2975,17 +2977,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userEmail,
             option: sanitizedOption
           };
-          
+
           await storage.createPagePostVote(voteData);
         });
       } finally {
         await session.endSession();
       }
-      
+
       // Get updated vote counts and calculate percentages
       const voteCounts = await storage.getPagePostVoteCounts(postId);
       const totalVotes = Object.values(voteCounts).reduce((sum, count) => sum + count, 0);
-      
+
       // Get post to get voting options
       const post = await storage.getPagePost(postId);
       const results = (post?.votingOptions || []).map(opt => {
@@ -2993,7 +2995,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
         return { option: opt, count, percentage };
       });
-      
+
       res.json({
         success: true,
         message: "Vote submitted successfully",
@@ -3013,7 +3015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/page-posts/:id/votes", async (req, res) => {
     try {
       const postId = parseInt(req.params.id);
-      
+
       // Get post to check voting options
       const post = await storage.getPagePost(postId);
       if (!post) {
@@ -3022,30 +3024,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Post not found" 
         });
       }
-      
+
       if (!post.isVotingEnabled || !post.votingOptions) {
         return res.status(400).json({ 
           success: false, 
           message: "Voting is not enabled for this post" 
         });
       }
-      
+
       // Get vote counts
       const voteCounts = await storage.getPagePostVoteCounts(postId);
       const totalVotes = Object.values(voteCounts).reduce((sum, count) => sum + count, 0);
-      
+
       // Calculate percentages (rounded to whole numbers)
       const results = post.votingOptions.map(option => {
         const count = voteCounts[option] || 0;
         const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-        
+
         return {
           option,
           count,
           percentage
         };
       });
-      
+
       res.json({
         success: true,
         totalVotes,
@@ -3065,10 +3067,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       // Check if user has voted
       const userVote = await storage.getUserPagePostVote(postId, userIp);
-      
+
       res.json({
         success: true,
         hasVoted: !!userVote,
@@ -3100,9 +3102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       const userVote = await storage.getUserPagePostVote(postId, userIp);
-      
+
       res.json({
         success: true,
         hasVoted: !!userVote,
@@ -3124,18 +3126,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       const post = await storage.getPagePost(postId);
       if (!post) {
         return res.status(404).json({ message: "Page post not found" });
       }
-      
+
       // Check if user is the author
       const canDelete = post.authorId === req.session.userId || post.authorIp === userIp;
       if (!canDelete) {
         return res.status(403).json({ message: "You can only delete your own posts" });
       }
-      
+
       await storage.deletePagePost(postId);
       res.json({ message: "Page post deleted successfully" });
     } catch (error) {
@@ -3162,9 +3164,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const postId = parseInt(req.params.id);
       const user = req.session.userId ? await storage.getUser(req.session.userId) : null;
       const userIp = getClientIP(req);
-      
+
       const { content, authorName } = req.body;
-      
+
       if (!content || !content.trim()) {
         return res.status(400).json({ message: "Comment content is required" });
       }
@@ -3187,13 +3189,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!authorName || !authorName.trim()) {
           return res.status(400).json({ message: "Author name is required for anonymous comments" });
         }
-        
+
         // Get or create visitor record for IQ score
         const visitor = await storage.trackVisitor({
           ipAddress: userIp,
           userAgent: req.headers['user-agent'] || 'Unknown'
         });
-        
+
         commentData.authorId = null;
         commentData.authorName = authorName.trim();
         commentData.authorAlias = null;
@@ -3203,7 +3205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertPagePostCommentSchema.parse(commentData);
       const comment = await storage.createPagePostComment(validatedData);
-      
+
       // Give 0.1 honour to post author for each comment (even on NSFW posts)
       // Note: MongoDB storage automatically increments comment count in createPagePostComment
       const post = await storage.getPagePost(postId);
@@ -3243,7 +3245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -3306,10 +3308,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ QueitDB API Endpoints ============
   // QueitDB JSON-NoSQL Interface dengan PostgreSQL Backend
-  
+
   // Import QueitDB bridge
   const { QueitDBBridge } = await import('./db.js');
-  
+
   // Get all databases (collections)
   app.get("/api/queitdb/databases", async (req, res) => {
     try {
@@ -3333,7 +3335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!name) {
         return res.status(400).json({ message: "Database name is required" });
       }
-      
+
       // Create table in PostgreSQL
       const createTableQuery = `
         CREATE TABLE IF NOT EXISTS ${name} (
@@ -3343,9 +3345,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
-      
+
       await QueitDBBridge.executeJSONQuery(createTableQuery);
-      
+
       res.json({ 
         message: `Database ${name} created successfully`,
         database: { name, collections: 1, size: '0 KB', documents: 0 }
@@ -3360,11 +3362,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/queitdb/databases/:name", async (req, res) => {
     try {
       const { name } = req.params;
-      
+
       // Drop table in PostgreSQL
       const dropTableQuery = `DROP TABLE IF EXISTS ${name}`;
       await QueitDBBridge.executeJSONQuery(dropTableQuery);
-      
+
       res.json({ message: `Database ${name} deleted successfully` });
     } catch (error) {
       console.error("Error deleting database:", error);
@@ -3376,13 +3378,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/queitdb/query", async (req, res) => {
     try {
       const { query, collection } = req.body;
-      
+
       if (!query || !collection) {
         return res.status(400).json({ message: "Query and collection are required" });
       }
 
       let result;
-      
+
       // Parse JSON-style query untuk konversi ke SQL
       if (query.startsWith('find(')) {
         const findQuery = `SELECT * FROM ${collection} WHERE data @> '{}'`;
@@ -3412,7 +3414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Direct SQL query
         result = await QueitDBBridge.executeJSONQuery(query);
       }
-      
+
       res.json({
         success: true,
         executionTime: "12ms",
@@ -3433,10 +3435,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/queitdb/data/:collection", async (req, res) => {
     try {
       const { collection } = req.params;
-      
+
       const query = `SELECT * FROM ${collection} LIMIT 100`;
       const result = await QueitDBBridge.executeJSONQuery(query);
-      
+
       res.json({
         collection: collection,
         documents: result.length,
@@ -3453,14 +3455,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { collection } = req.params;
       const { document } = req.body;
-      
+
       if (!document) {
         return res.status(400).json({ message: "Document data is required" });
       }
-      
+
       const insertQuery = `INSERT INTO ${collection} (data) VALUES ($1) RETURNING *`;
       const result = await QueitDBBridge.executeJSONQuery(insertQuery, [JSON.stringify(document)]);
-      
+
       res.json({
         success: true,
         document: result[0],
@@ -3477,14 +3479,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { collection, id } = req.params;
       const { document } = req.body;
-      
+
       if (!document) {
         return res.status(400).json({ message: "Document data is required" });
       }
-      
+
       const updateQuery = `UPDATE ${collection} SET data = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`;
       const result = await QueitDBBridge.executeJSONQuery(updateQuery, [JSON.stringify(document), id]);
-      
+
       res.json({
         success: true,
         document: result[0],
@@ -3500,10 +3502,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/queitdb/data/:collection/:id", async (req, res) => {
     try {
       const { collection, id } = req.params;
-      
+
       const deleteQuery = `DELETE FROM ${collection} WHERE id = $1`;
       await QueitDBBridge.executeJSONQuery(deleteQuery, [id]);
-      
+
       res.json({
         success: true,
         message: `Document with ID ${id} deleted from ${collection}`
@@ -3530,7 +3532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         databaseEngine: "PostgreSQL",
         version: "QueitDB 1.0.0"
       };
-      
+
       res.json(status);
     } catch (error) {
       console.error("Error getting server status:", error);
@@ -3552,7 +3554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           apiKey: "queit_api_key_2025"
         }
       };
-      
+
       res.json(connectionInfo);
     } catch (error) {
       console.error("Error getting connection info:", error);
@@ -3562,21 +3564,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ New Database API Endpoints ============
   // Support for redesigned database interface
-  
+
   // Use existing MongoDB connection from main application
   async function connectToQueitDB() {
     await connectToMongoDB();
-    
+
     // Access the native MongoDB client through mongoose connection
     const db = mongoose.connection.db;
-    
+
     if (!db) {
       throw new Error('MongoDB connection not available');
     }
-    
+
     return db;
   }
-  
+
   // SQL Query execution endpoint - requires authentication
   app.post("/api/database/sql", async (req, res) => {
     // Check authentication
@@ -3586,10 +3588,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Authentication required. Please login to access database." 
       });
     }
-    
+
     try {
       const { query, database } = req.body;
-      
+
       if (!query || !database) {
         return res.status(400).json({ 
           success: false, 
@@ -3598,18 +3600,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Connect to QueitDB collection
-      const queitDbCollection = mongoose.connection.db.collection('queit_databases');
-      
+      const db = mongoose.connection.db;
+      if (!db) {
+        return res.status(500).json({ success: false, error: "Database connection not available" });
+      }
+      const queitDbCollection = db.collection('queit_databases');
+
       // Handle simple SELECT queries for database values
       if (query.toLowerCase().includes('select')) {
         // Import the UserDatabase model
         const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-        
+
         const dbRecord = await UserDatabaseModel.findOne({ 
           userId: req.session.userId, 
           databaseName: database 
         });
-        
+
         if (!dbRecord) {
           return res.json({
             success: true,
@@ -3617,17 +3623,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             query
           });
         }
-        
+
         // Return only dataFields with clean format
         const cleanResult = dbRecord.dataFields || {};
-        
+
         return res.json({
           success: true,
           result: JSON.stringify(cleanResult, null, 2),
           query
         });
       }
-      
+
       // Handle INSERT queries for adding values
       if (query.toLowerCase().includes('insert')) {
         return res.json({
@@ -3636,7 +3642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           query
         });
       }
-      
+
       // Default response for other queries
       res.json({
         success: true,
@@ -3656,7 +3662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/database/search", async (req, res) => {
     try {
       const { searchQuery } = req.body;
-      
+
       if (!searchQuery) {
         return res.status(400).json({ 
           success: false, 
@@ -3666,7 +3672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse FOUND('key':'value') format
       const foundMatch = searchQuery.match(/FOUND\('(.+?)':'(.+?)'\)/);
-      
+
       if (!foundMatch) {
         return res.status(400).json({ 
           success: false, 
@@ -3675,20 +3681,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [, key, value] = foundMatch;
-      
+
       // Connect to QueitDB and search across collections
       const db = await connectToQueitDB();
       const collections = await db.listCollections().toArray();
-      
+
       const searchResults = [];
-      
+
       for (const collectionInfo of collections) {
         const collection = db.collection(collectionInfo.name);
-        
+
         // Search for documents that match the key-value pair
         const query = { [key]: { $regex: value, $options: 'i' } };
         const results = await collection.find(query).limit(10).toArray();
-        
+
         for (const result of results) {
           const { _id, _queit_db_created, ...rest } = result;
           searchResults.push({
@@ -3720,10 +3726,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Authentication required. Please login to create database." 
       });
     }
-    
+
     try {
       const { name, nameValue, dataValue } = req.body;
-      
+
       if (!name) {
         return res.status(400).json({ 
           success: false, 
@@ -3737,20 +3743,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import the UserDatabase model
       const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-      
+
       // Check if database already exists for this user
       const existingDb = await UserDatabaseModel.findOne({ 
         userId: req.session.userId, 
         databaseName: name 
       });
-      
+
       if (existingDb) {
         return res.status(400).json({ 
           success: false, 
           error: `Database '${name}' already exists for this user` 
         });
       }
-      
+
       // Create new user database with name-value field
       const userDatabase = new UserDatabaseModel({
         userId: req.session.userId,
@@ -3761,9 +3767,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      
+
       await userDatabase.save();
-      
+
       res.json({
         success: true,
         message: `Database '${name}' created successfully with "${fieldName}": "${fieldValue}"`,
@@ -3787,10 +3793,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Authentication required. Please login to add values." 
       });
     }
-    
+
     try {
       const { database, nameValue, dataValue } = req.body;
-      
+
       if (!database || !nameValue || !dataValue) {
         return res.status(400).json({ 
           success: false, 
@@ -3800,23 +3806,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import the UserDatabase model
       const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-      
+
       // Check if database exists for this user
       const dbRecord = await UserDatabaseModel.findOne({ 
         userId: req.session.userId, 
         databaseName: database 
       });
-      
+
       if (!dbRecord) {
         return res.status(404).json({ 
           success: false, 
           error: `Database '${database}' not found for this user` 
         });
       }
-      
+
       const fieldName = nameValue.trim();
       const fieldValue = dataValue.trim();
-      
+
       // Add new field with name-value pair
       const updateResult = await UserDatabaseModel.updateOne(
         { userId: req.session.userId, databaseName: database },
@@ -3827,10 +3833,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       );
-      
+
       console.log(`Add value update result:`, updateResult);
       console.log(`Added field "${fieldName}" with value "${fieldValue}" to database "${database}"`);
-      
+
       res.json({
         success: true,
         message: `Added "${fieldName}": "${fieldValue}" to database '${database}'`,
@@ -3856,10 +3862,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Authentication required. Please login to update database." 
       });
     }
-    
+
     try {
       const { database, data } = req.body;
-      
+
       if (!database || !data) {
         return res.status(400).json({ 
           success: false, 
@@ -3869,20 +3875,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import the UserDatabase model
       const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-      
+
       // Check if database exists for this user
       const dbRecord = await UserDatabaseModel.findOne({ 
         userId: req.session.userId, 
         databaseName: database 
       });
-      
+
       if (!dbRecord) {
         return res.status(404).json({ 
           success: false, 
           error: `Database '${database}' not found for this user` 
         });
       }
-      
+
       // Update the entire dataFields object with new data
       const updateResult = await UserDatabaseModel.updateOne(
         { userId: req.session.userId, databaseName: database },
@@ -3893,7 +3899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       );
-      
+
       res.json({
         success: true,
         message: `Database '${database}' updated successfully`,
@@ -3918,10 +3924,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Authentication required. Please login to create users." 
       });
     }
-    
+
     try {
       const { database, username, password, authType, privilege } = req.body;
-      
+
       if (!database || !username || (authType === 'password' && !password)) {
         return res.status(400).json({ 
           success: false, 
@@ -3931,20 +3937,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import the UserDatabase model
       const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-      
+
       // Check if database exists for this user
       const dbRecord = await UserDatabaseModel.findOne({ 
         userId: req.session.userId, 
         databaseName: database 
       });
-      
+
       if (!dbRecord) {
         return res.status(404).json({ 
           success: false, 
           error: `Database '${database}' not found for this user` 
         });
       }
-      
+
       // Check if username already exists in this database
       const existingUser = dbRecord.authorizedUsers.find(user => user.username === username);
       if (existingUser) {
@@ -3953,7 +3959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "Username already exists in this database" 
         });
       }
-      
+
       // Add new authorized user to the database
       const newUser = {
         username,
@@ -3962,7 +3968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         privilege,
         createdAt: new Date()
       };
-      
+
       await UserDatabaseModel.updateOne(
         { userId: req.session.userId, databaseName: database },
         { 
@@ -3970,7 +3976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           $set: { updatedAt: new Date() }
         }
       );
-      
+
       res.json({
         success: true,
         message: `User '${username}' added to database '${database}' successfully`,
@@ -3994,10 +4000,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Authentication required. Please login to manage network access." 
       });
     }
-    
+
     try {
       const { database, ipAddress, description } = req.body;
-      
+
       if (!database || !ipAddress) {
         return res.status(400).json({ 
           success: false, 
@@ -4007,20 +4013,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import the UserDatabase model
       const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-      
+
       // Check if database exists for this user
       const dbRecord = await UserDatabaseModel.findOne({ 
         userId: req.session.userId, 
         databaseName: database 
       });
-      
+
       if (!dbRecord) {
         return res.status(404).json({ 
           success: false, 
           error: `Database '${database}' not found for this user` 
         });
       }
-      
+
       // Check if IP already exists in this database
       const existingIp = dbRecord.networkIPs.find(ip => ip.ipAddress === ipAddress);
       if (existingIp) {
@@ -4029,14 +4035,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "IP address already exists in this database whitelist" 
         });
       }
-      
+
       // Add new network IP to the database
       const newIP = {
         ipAddress,
         description: description || '',
         createdAt: new Date()
       };
-      
+
       await UserDatabaseModel.updateOne(
         { userId: req.session.userId, databaseName: database },
         { 
@@ -4044,7 +4050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           $set: { updatedAt: new Date() }
         }
       );
-      
+
       res.json({
         success: true,
         message: `IP ${ipAddress} added to database '${database}' whitelist`,
@@ -4069,16 +4075,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Authentication required. Please login to view databases." 
       });
     }
-    
+
     try {
       // Import the UserDatabase model
       const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-      
+
       // Get all databases for this user
       const userDatabases = await UserDatabaseModel.find({ 
         userId: req.session.userId 
       });
-      
+
       // Format database list for frontend
       const databases = userDatabases.map(db => ({
         name: db.databaseName,
@@ -4088,7 +4094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: db.createdAt,
         updatedAt: db.updatedAt
       }));
-      
+
       res.json({
         success: true,
         databases
@@ -4139,7 +4145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/database/backup", async (req, res) => {
     try {
       const { database } = req.body;
-      
+
       if (!database) {
         return res.status(400).json({ 
           success: false, 
@@ -4148,10 +4154,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const backupFilename = `${database}_backup_${new Date().toISOString().split('T')[0]}.sql`;
-      
+
       // Create backup using MongoDB connection
       // This is a placeholder implementation
-      
+
       res.json({
         success: true,
         message: `Backup created for database '${database}'`,
@@ -4175,7 +4181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/database/realtime", async (req, res) => {
     try {
       const { database, region } = req.body;
-      
+
       if (!database || !region) {
         return res.status(400).json({ 
           success: false, 
@@ -4185,7 +4191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Deploy realtime triggers using MongoDB connection
       // This is a placeholder implementation
-      
+
       res.json({
         success: true,
         message: `Realtime triggers deployed for database '${database}' in region '${region}'`,
@@ -4207,10 +4213,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Update user database badges - direct MongoDB access  
   app.post("/api/database/update-badges", async (req, res) => {
-    
+
     try {
       const { email, badges } = req.body;
-      
+
       if (!email || !badges) {
         return res.status(400).json({ 
           success: false, 
@@ -4220,7 +4226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Direct MongoDB access
       const { UserModel } = await import('../shared/mongodb-schema');
-      
+
       const user = await UserModel.findOne({ email });
       if (!user) {
         return res.status(404).json({ 
@@ -4228,7 +4234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: `User with email ${email} not found` 
         });
       }
-      
+
       // Update user with database badges
       const updatedUser = await UserModel.findOneAndUpdate(
         { email },
@@ -4240,7 +4246,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         { new: true }
       );
-      
+
+      if (!updatedUser) {
+        return res.status(500).json({ success: false, error: "Failed to update user" });
+      }
+
       res.json({
         success: true,
         message: `Database badges updated for user ${email}`,
@@ -4268,7 +4278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/database/user-badges/:email", async (req, res) => {
     try {
       const { email } = req.params;
-      
+
       if (!email) {
         return res.status(400).json({ 
           success: false, 
@@ -4278,7 +4288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Direct MongoDB access
       const { UserModel } = await import('../shared/mongodb-schema');
-      
+
       const user = await UserModel.findOne({ email });
       if (!user) {
         return res.status(404).json({ 
@@ -4286,7 +4296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: `User with email ${email} not found` 
         });
       }
-      
+
       res.json({
         success: true,
         email: user.email,
@@ -4318,18 +4328,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Authentication required. Please login to view authorized users." 
       });
     }
-    
+
     try {
       // Import the UserDatabase model
       const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-      
+
       // Get all databases for this user and extract authorized users
       const userDatabases = await UserDatabaseModel.find({ 
         userId: req.session.userId 
       });
-      
+
       // Aggregate all authorized users from all databases
-      const allUsers = [];
+      const allUsers: any[] = [];
       userDatabases.forEach(db => {
         if (db.authorizedUsers && db.authorizedUsers.length > 0) {
           db.authorizedUsers.forEach(user => {
@@ -4343,7 +4353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       });
-      
+
       res.json({
         success: true,
         users: allUsers
@@ -4379,28 +4389,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import the UserDatabase model
       const { UserDatabaseModel } = await import('../shared/mongodb-schema');
-      
+
       // Check if database exists for this user
       const dbRecord = await UserDatabaseModel.findOne({ 
         userId: req.session.userId, 
         databaseName: database 
       });
-      
+
       if (!dbRecord) {
         return res.status(404).json({ 
           success: false, 
           error: `Database '${database}' not found for this user` 
         });
       }
-      
+
       // Delete the database
       const deleteResult = await UserDatabaseModel.deleteOne({ 
         userId: req.session.userId, 
         databaseName: database 
       });
-      
+
       console.log(`Database '${database}' deleted. Result:`, deleteResult);
-      
+
       res.json({
         success: true,
         message: `Database '${database}' and all its data have been permanently deleted`
@@ -4422,7 +4432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const success = await storage.deleteAllDatabaseData(req.session.userId);
-      
+
       if (success) {
         res.json({ message: "All database data deleted successfully" });
       } else {
@@ -4447,7 +4457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const success = await storage.deleteUserIPAccess(req.session.userId, ipAddress);
-      
+
       if (success) {
         res.json({ message: "IP access deleted successfully" });
       } else {
@@ -4472,7 +4482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const success = await storage.deleteAuthorizedUser(req.session.userId, targetUserId);
-      
+
       if (success) {
         res.json({ message: "Authorized user deleted successfully" });
       } else {
@@ -4493,7 +4503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const articleId = parseInt(req.params.id);
       const success = await storage.deleteArticle(articleId, req.session.userId);
-      
+
       if (success) {
         res.json({ message: "Article deleted successfully" });
       } else {
@@ -4514,7 +4524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const postId = parseInt(req.params.id);
       const success = await storage.deletePagePost(postId, req.session.userId);
-      
+
       if (success) {
         res.json({ message: "Page post deleted successfully" });
       } else {
@@ -4538,7 +4548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { email, role } = req.body;
-      
+
       if (!email || !role) {
         return res.status(400).json({ 
           error: "Email and role are required" 
@@ -4569,16 +4579,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Send invitation email using Gmail
-      const { sendEmail } = await import('./email.js');
-      
+      const emailModule = await import('./email.js');
+      const sendEmail = emailModule.default || emailModule.sendEmail;
+
       const subject = `Database Collaboration Invitation from ${invitingUser.firstName} ${invitingUser.lastName}`;
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Database Collaboration Invitation</h2>
           <p>Hello ${invitedUser.firstName},</p>
-          
+
           <p><strong>${invitingUser.firstName} ${invitingUser.lastName}</strong> has invited you to collaborate on their Queit database with <strong>${role}</strong> access level.</p>
-          
+
           <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin: 0 0 10px 0; color: #555;">Access Level: ${role}</h3>
             <ul style="margin: 0; padding-left: 20px;">
@@ -4587,21 +4598,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ${role === 'Admin' ? '<li>View databases and execute read queries</li><li>Create and modify data</li><li>Full access and user management</li>' : ''}
             </ul>
           </div>
-          
+
           <p>To access the database collaboration features:</p>
           <ol>
             <li>Log in to your Queit account</li>
             <li>Navigate to the Database section</li>
             <li>You'll see the shared databases in your authorized list</li>
           </ol>
-          
+
           <div style="text-align: center; margin: 30px 0;">
             <a href="https://queit-two.vercel.app/database" 
                style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
               Access Database
             </a>
           </div>
-          
+
           <p style="color: #666; font-size: 14px;">
             This invitation was sent from Queit Database collaboration system. 
             If you didn't expect this invitation, you can safely ignore this email.
@@ -4644,7 +4655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { plan } = req.body;
-      
+
       if (!plan || !['inter', 'pro'].includes(plan)) {
         return res.status(400).json({ 
           error: "Invalid plan. Must be 'inter' or 'pro'" 
@@ -4745,7 +4756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const guildId = parseInt(req.params.id);
       const guild = await storage.getGuildById(guildId);
-      
+
       console.log("=== GUILD DEBUG INFO ===");
       console.log("Guild ID requested:", guildId);
       console.log("Guild data retrieved:", JSON.stringify(guild, null, 2));
@@ -4757,7 +4768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Guild owner:", guild?.ownerName);
       console.log("Guild member count:", guild?.memberCount);
       console.log("=== END DEBUG INFO ===");
-      
+
       if (!guild) {
         return res.status(404).json({ error: "Guild not found" });
       }
@@ -4802,7 +4813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get the actual member count from the database
       const actualMemberCount = members.length;
-      
+
       console.log("=== MEMBER COUNT DEBUG ===");
       console.log("Members found in database:", actualMemberCount);
       console.log("Guild member count in database:", guild.memberCount);
@@ -4810,7 +4821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Owner is member:", members.some(m => m.userId === guild.ownerId));
       console.log("All members:", members.map(m => ({ userId: m.userId, username: m.username, role: m.role })));
       console.log("=== END MEMBER COUNT DEBUG ===");
-      
+
       // Check if owner is not a member and add them (fix for existing guilds)
       const ownerIsMember = members.some(m => m.userId === guild.ownerId);
       if (!ownerIsMember) {
@@ -4824,14 +4835,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Refresh members list
         const updatedMembers = await storage.getGuildMembers(guildId);
         const updatedMemberCount = updatedMembers.length;
-        
+
         console.log("Updated member count after adding owner:", updatedMemberCount);
-        
+
         // Update guild member count in database if it doesn't match
         if (guild.memberCount !== updatedMemberCount) {
           await storage.updateGuildMemberCount(guildId, updatedMemberCount);
         }
-        
+
         // Return updated information
         const detailedGuild = {
           ...guild, // Guild is already a plain object from storage
@@ -4843,13 +4854,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         return res.json(detailedGuild);
       }
-      
+
       // Update guild member count in database if it doesn't match
       if (guild.memberCount !== actualMemberCount) {
         console.log("Updating guild member count from", guild.memberCount, "to", actualMemberCount);
         await storage.updateGuildMemberCount(guildId, actualMemberCount);
       }
-      
+
       // Return detailed guild information
       const detailedGuild = {
         ...guild, // Guild is already a plain object from storage
@@ -4872,11 +4883,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const guildId = parseInt(req.params.id);
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-      
+
       if (!req.session?.userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const posts = await storage.getGuildPosts(guildId, limit);
       res.json(posts);
     } catch (error) {
@@ -4921,7 +4932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const guildId = parseInt(req.params.id);
       const guild = await storage.getGuildById(guildId);
-      
+
       if (!guild) {
         return res.status(404).json({ error: "Guild not found" });
       }
@@ -4934,7 +4945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update user's current guild
       await storage.updateUserCurrentGuild(req.session.userId, guildId, guild.name);
-      
+
       res.json({ message: "Successfully entered guild", guildId, guildName: guild.name });
     } catch (error) {
       console.error("Error entering guild:", error);
@@ -4951,7 +4962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.session.userId;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -4967,7 +4978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Clear user's current guild
       await storage.updateUserCurrentGuild(userId, null, null);
-      
+
       res.json({ message: "Successfully exited guild and removed membership" });
     } catch (error) {
       console.error("Error exiting guild:", error);
@@ -4982,7 +4993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const guildId = parseInt(req.params.id);
       const guild = await storage.getGuildById(guildId);
-      
+
       if (!guild) {
         return res.status(404).json({ error: "Guild not found" });
       }
@@ -5010,7 +5021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const guildId = parseInt(req.params.id);
       const guild = await storage.getGuildById(guildId);
-      
+
       if (!guild) {
         return res.status(404).json({ error: "Guild not found" });
       }
@@ -5038,12 +5049,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/guild-posts/all", async (req, res) => {
     try {
       const { GuildPostModel } = await import('../shared/mongodb-schema');
-      
+
       // Get all guild posts with guild information, sorted by creation date
       const posts = await GuildPostModel.find({})
         .sort({ createdAt: -1 })
         .limit(6); // Limit to 6 for home page feed
-      
+
       res.json(posts);
     } catch (error) {
       console.error("Error fetching all guild posts:", error);
@@ -5052,34 +5063,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ Guild API Endpoints ============
-  
+
   // Get all guilds (public only for non-members, all for members)
   app.get("/api/guilds", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const userId = req.session.userId;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       // Get all guilds - public guilds for browsing, user's private guilds
       const publicGuilds = await GuildModel.find({ isPrivate: false }).sort({ createdAt: -1 });
-      
+
       // Get user's private guild memberships
       const userMemberships = await GuildMemberModel.find({ userId }).select('guildId');
       const userGuildIds = userMemberships.map(m => m.guildId);
-      
+
       // Get private guilds user is member of
       const privateGuilds = await GuildModel.find({ 
         _id: { $in: userGuildIds },
         isPrivate: true 
       }).sort({ createdAt: -1 });
-      
+
       // Combine and add membership status
       const allGuilds = [...publicGuilds, ...privateGuilds].map(guild => {
         const isMember = userGuildIds.includes(guild.id);
@@ -5089,42 +5100,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canJoin: !guild.isPrivate || !isMember
         };
       });
-      
+
       res.json(allGuilds);
     } catch (error) {
       console.error("Error fetching guilds:", error);
       res.status(500).json({ message: "Failed to fetch guilds" });
     }
   });
-  
+
   // Create new guild
   app.post("/api/guilds", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const userId = req.session.userId;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       const { name, description, isPrivate, insignia, logo, logoBackgroundColor } = req.body;
-      
+
       if (!name || !description || !insignia || !logo || !logoBackgroundColor) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-      
+
       // Check if insignia is unique
       const existingGuild = await GuildModel.findOne({ insignia });
       if (existingGuild) {
         return res.status(400).json({ message: "Insignia already taken" });
       }
-      
+
       const guildId = await getNextSequence('guild');
-      
+
       const guild = new GuildModel({
         id: guildId,
         name,
@@ -5138,9 +5149,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         memberCount: 1,
         postCount: 0
       });
-      
+
       await guild.save();
-      
+
       // Add owner as first member
       const membershipId = await getNextSequence('guild_member');
       const membership = new GuildMemberModel({
@@ -5150,54 +5161,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username || `${user.firstName} ${user.lastName}`,
         role: 'owner'
       });
-      
+
       await membership.save();
-      
+
       res.status(201).json(guild);
     } catch (error) {
       console.error("Error creating guild:", error);
       res.status(500).json({ message: "Failed to create guild" });
     }
   });
-  
 
-  
+
+
   // Join public guild directly
   app.post("/api/guilds/:id/join", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const guildId = parseInt(req.params.id);
       const userId = req.session.userId;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       const guild = await GuildModel.findOne({ id: guildId });
       if (!guild) {
         return res.status(404).json({ message: "Guild not found" });
       }
-      
+
       if (guild.isPrivate) {
         return res.status(400).json({ message: "Cannot directly join private guild. Request to join instead." });
       }
-      
+
       // Check if already member
       const existingMembership = await GuildMemberModel.findOne({ guildId, userId });
       if (existingMembership) {
         return res.status(400).json({ message: "Already a member of this guild" });
       }
-      
+
       // Check guild membership limit (maximum 2 guilds per user)
       const userGuildCount = await GuildMemberModel.countDocuments({ userId });
       if (userGuildCount >= 2) {
         return res.status(400).json({ message: "You can only be a member of maximum 2 guilds. Please leave a guild first." });
       }
-      
+
       // Add member
       const membershipId = await getNextSequence('guild_member');
       const membership = new GuildMemberModel({
@@ -5207,61 +5218,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username || `${user.firstName} ${user.lastName}`,
         role: 'member'
       });
-      
+
       await membership.save();
-      
+
       // Update member count
       await GuildModel.updateOne({ id: guildId }, { $inc: { memberCount: 1 } });
-      
+
       res.json({ message: "Successfully joined guild", membership });
     } catch (error) {
       console.error("Error joining guild:", error);
       res.status(500).json({ message: "Failed to join guild" });
     }
   });
-  
+
   // Request to join private guild
   app.post("/api/guilds/:id/request", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const guildId = parseInt(req.params.id);
       const userId = req.session.userId;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       const guild = await GuildModel.findOne({ id: guildId });
       if (!guild) {
         return res.status(404).json({ message: "Guild not found" });
       }
-      
+
       if (!guild.isPrivate) {
         return res.status(400).json({ message: "This is a public guild. You can join directly." });
       }
-      
+
       // Check if already member
       const existingMembership = await GuildMemberModel.findOne({ guildId, userId });
       if (existingMembership) {
         return res.status(400).json({ message: "Already a member of this guild" });
       }
-      
+
       // Check guild membership limit (maximum 2 guilds per user)
       const userGuildCount = await GuildMemberModel.countDocuments({ userId });
       if (userGuildCount >= 2) {
         return res.status(400).json({ message: "You can only be a member of maximum 2 guilds. Please leave a guild first." });
       }
-      
+
       // Check if request already sent
       const existingRequest = await GuildRequestModel.findOne({ guildId, userId, status: 'pending' });
       if (existingRequest) {
         return res.status(400).json({ message: "Request already sent and pending" });
       }
-      
+
       // Create request
       const requestId = await getNextSequence('guild_request');
       const request = new GuildRequestModel({
@@ -5272,9 +5283,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username || `${user.firstName} ${user.lastName}`,
         userEmail: user.email
       });
-      
+
       await request.save();
-      
+
       // Send email notification to guild owner
       const owner = await storage.getUser(guild.ownerId);
       if (owner && owner.email) {
@@ -5285,45 +5296,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requestId
         );
       }
-      
+
       res.json({ message: "Join request sent successfully", request });
     } catch (error) {
       console.error("Error requesting to join guild:", error);
       res.status(500).json({ message: "Failed to send join request" });
     }
   });
-  
+
   // Send email invite to join guild (owner/admin only)
   app.post("/api/guilds/:id/invite", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const guildId = parseInt(req.params.id);
       const userId = req.session.userId;
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
-      
+
       // Check if user is owner/admin
       const membership = await GuildMemberModel.findOne({ guildId, userId });
       if (!membership || (membership.role !== 'owner' && membership.role !== 'admin')) {
         return res.status(403).json({ message: "Only guild owners and admins can send invites" });
       }
-      
+
       const guild = await GuildModel.findOne({ id: guildId });
       if (!guild) {
         return res.status(404).json({ message: "Guild not found" });
       }
-      
+
       const inviter = await storage.getUser(userId);
       if (!inviter) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       // Check if already invited
       const existingInvite = await GuildInviteModel.findOne({ 
         guildId, 
@@ -5333,12 +5344,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingInvite) {
         return res.status(400).json({ message: "Email already invited and pending" });
       }
-      
+
       // Create invite
       const inviteId = await getNextSequence('guild_invite');
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
-      
+
       const invite = new GuildInviteModel({
         id: inviteId,
         guildId: guildId,
@@ -5348,9 +5359,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invitedByName: `${inviter.firstName} ${inviter.lastName}`,
         expiresAt: expiresAt
       });
-      
+
       await invite.save();
-      
+
       // Send email invite
       const inviteUrl = `https://queit-two.vercel.app/guild/invite/${inviteId}`;
       const emailSent = await sendGuildInviteEmail(
@@ -5359,52 +5370,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invite.invitedByName,
         inviteUrl
       );
-      
+
       if (!emailSent) {
         return res.status(500).json({ message: "Failed to send invite email" });
       }
-      
+
       res.json({ message: "Invite sent successfully", invite });
     } catch (error) {
       console.error("Error sending guild invite:", error);
       res.status(500).json({ message: "Failed to send guild invite" });
     }
   });
-  
+
   // Accept guild invite
   app.post("/api/guild-invites/:id/accept", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const inviteId = parseInt(req.params.id);
       const userId = req.session.userId;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       const invite = await GuildInviteModel.findOne({ id: inviteId });
       if (!invite) {
         return res.status(404).json({ message: "Invite not found" });
       }
-      
+
       if (invite.status !== 'pending') {
         return res.status(400).json({ message: "Invite is no longer valid" });
       }
-      
+
       if (invite.expiresAt < new Date()) {
         await GuildInviteModel.updateOne({ id: inviteId }, { status: 'expired' });
         return res.status(400).json({ message: "Invite has expired" });
       }
-      
+
       // Check if user email matches invite
       if (user.email !== invite.email) {
         return res.status(403).json({ message: "This invite is for a different email address" });
       }
-      
+
       // Check if already member
       const existingMembership = await GuildMemberModel.findOne({ 
         guildId: invite.guildId, 
@@ -5413,7 +5424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingMembership) {
         return res.status(400).json({ message: "Already a member of this guild" });
       }
-      
+
       // Add member
       const membershipId = await getNextSequence('guild_member');
       const membership = new GuildMemberModel({
@@ -5423,46 +5434,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username || `${user.firstName} ${user.lastName}`,
         role: 'member'
       });
-      
+
       await membership.save();
-      
+
       // Update member count and mark invite as accepted
       await Promise.all([
         GuildModel.updateOne({ id: invite.guildId }, { $inc: { memberCount: 1 } }),
         GuildInviteModel.updateOne({ id: inviteId }, { status: 'accepted' })
       ]);
-      
+
       res.json({ message: "Successfully joined guild via invite", membership });
     } catch (error) {
       console.error("Error accepting guild invite:", error);
       res.status(500).json({ message: "Failed to accept guild invite" });
     }
   });
-  
+
   // Approve/reject join request (owner/admin only)
   app.post("/api/guild-requests/:id/:action", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const requestId = parseInt(req.params.id);
       const action = req.params.action; // 'approve' or 'reject'
       const userId = req.session.userId;
-      
+
       if (action !== 'approve' && action !== 'reject') {
         return res.status(400).json({ message: "Invalid action. Use 'approve' or 'reject'" });
       }
-      
+
       const request = await GuildRequestModel.findOne({ id: requestId });
       if (!request) {
         return res.status(404).json({ message: "Request not found" });
       }
-      
+
       if (request.status !== 'pending') {
         return res.status(400).json({ message: "Request is no longer pending" });
       }
-      
+
       // Check if user is owner/admin of the guild
       const membership = await GuildMemberModel.findOne({ 
         guildId: request.guildId, 
@@ -5471,14 +5482,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!membership || (membership.role !== 'owner' && membership.role !== 'admin')) {
         return res.status(403).json({ message: "Only guild owners and admins can manage requests" });
       }
-      
+
       if (action === 'approve') {
         // Check guild membership limit (maximum 2 guilds per user) before approving
         const userGuildCount = await GuildMemberModel.countDocuments({ userId: request.userId });
         if (userGuildCount >= 2) {
           return res.status(400).json({ message: "User has reached maximum guild limit (2 guilds)" });
         }
-        
+
         // Add member
         const membershipId = await getNextSequence('guild_member');
         const newMembership = new GuildMemberModel({
@@ -5488,19 +5499,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: request.username,
           role: 'member'
         });
-        
+
         await newMembership.save();
-        
+
         // Update member count
         await GuildModel.updateOne({ id: request.guildId }, { $inc: { memberCount: 1 } });
       }
-      
+
       // Update request status
       await GuildRequestModel.updateOne(
         { id: requestId }, 
         { status: action === 'approve' ? 'approved' : 'rejected' }
       );
-      
+
       res.json({ 
         message: `Request ${action}d successfully`,
         request: { ...request.toObject(), status: action === 'approve' ? 'approved' : 'rejected' }
@@ -5510,49 +5521,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: `Failed to ${req.params.action} guild request` });
     }
   });
-  
+
   // Leave guild
   app.post("/api/guilds/:id/leave", async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const guildId = parseInt(req.params.id);
       const userId = req.session.userId;
       const { password } = req.body;
-      
+
       // Validate password is provided
       if (!password) {
         return res.status(400).json({ message: "Password is required for leaving guild" });
       }
-      
+
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Verify password using the correct password comparison function
-      const isValidPassword = await comparePasswords(password, user.password);
-      
+      const isValidPassword = await comparePasswords(password, user.password || '');
+
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid password" });
       }
-      
+
       const success = await storage.leaveGuild(guildId, userId);
-      
+
       if (!success) {
         return res.status(400).json({ 
           message: "Cannot leave guild. You might not be a member or you are the owner." 
         });
       }
-      
+
       // If this was the user's current guild, clear it
       if (user.currentGuildId === guildId) {
         await storage.updateUserCurrentGuild(userId, null, null);
       }
-      
+
       res.json({ message: "Successfully left the guild" });
     } catch (error) {
       console.error("Error leaving guild:", error);
@@ -5566,16 +5577,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const guildId = parseInt(req.params.id);
       const success = await storage.deleteGuild(guildId, req.session.userId);
-      
+
       if (!success) {
         return res.status(403).json({ 
           message: "Only guild owners can delete their guild" 
         });
       }
-      
+
       res.json({ message: "Guild deleted successfully" });
     } catch (error) {
       console.error("Error deleting guild:", error);
@@ -5589,16 +5600,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const postId = parseInt(req.params.id);
       const success = await storage.deleteGuildPost(postId, req.session.userId);
-      
+
       if (!success) {
         return res.status(403).json({ 
           message: "Only post authors can delete their posts" 
         });
       }
-      
+
       res.json({ message: "Post deleted successfully" });
     } catch (error) {
       console.error("Error deleting guild post:", error);
@@ -5612,10 +5623,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const membership = await storage.getUserGuildMembership(req.session.userId);
       const canCreate = membership.length === 0; // Can only create if not member of any guild
-      
+
       res.json({ canCreate, membershipCount: membership.length });
     } catch (error) {
       console.error("Error checking guild creation eligibility:", error);
@@ -5629,19 +5640,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const guildId = parseInt(req.params.id);
       const userId = req.session.userId;
-      
+
       // Check if user is member of guild
       const membership = await GuildMemberModel.findOne({ guildId, userId });
       if (!membership) {
         return res.status(403).json({ message: "Access denied. Guild members only." });
       }
-      
+
       // Get guild posts
       const posts = await GuildPostModel.find({ guildId }).sort({ createdAt: -1 });
-      
+
       res.json(posts);
     } catch (error) {
       console.error("Error fetching guild posts:", error);
@@ -5655,41 +5666,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const userId = req.session.userId;
       const { title, content, type, guildId } = req.body;
-      
+
       if (!title || !content || !type || !guildId) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-      
+
       const guildIdNum = parseInt(guildId);
-      
+
       // Check if user is member of guild
       const membership = await GuildMemberModel.findOne({ guildId: guildIdNum, userId });
       if (!membership) {
         return res.status(403).json({ message: "Access denied. Guild members only." });
       }
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       // Get guild info for post
       const guild = await GuildModel.findOne({ id: guildIdNum });
       if (!guild) {
         return res.status(404).json({ message: "Guild not found" });
       }
-      
+
       // Handle file upload
       let mediaUrl = null;
       if (req.file) {
         mediaUrl = `/uploads/${req.file.filename}`;
       }
-      
+
       const postId = await getNextSequence('guild_post');
-      
+
       const post = new GuildPostModel({
         id: postId,
         guildId: guildIdNum,
@@ -5705,12 +5716,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authorProfileUrl: user.profileImageUrl,
         authorIp: req.ip || '127.0.0.1'
       });
-      
+
       await post.save();
-      
+
       // Update guild post count
       await GuildModel.updateOne({ id: guildIdNum }, { $inc: { postCount: 1 } });
-      
+
       res.status(201).json(post);
     } catch (error) {
       console.error("Error creating guild post:", error);
@@ -5724,24 +5735,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const guildId = parseInt(req.params.id);
       const userId = req.session.userId;
       const { description } = req.body;
-      
+
       if (!description) {
         return res.status(400).json({ message: "Description is required" });
       }
-      
+
       // Check if user is owner of guild
       const membership = await GuildMemberModel.findOne({ guildId, userId });
       if (!membership || membership.role !== 'owner') {
         return res.status(403).json({ message: "Only guild owners can update guild description" });
       }
-      
+
       // Update guild description
       await GuildModel.updateOne({ id: guildId }, { description });
-      
+
       res.json({ message: "Guild description updated successfully" });
     } catch (error) {
       console.error("Error updating guild description:", error);
@@ -5750,12 +5761,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ IQ Test API Endpoints ============
-  
+
   // Get IQ test status
   app.get("/api/iq/status", async (req, res) => {
     try {
       const clientIP = getClientIP(req);
-      
+
       if (req.session?.userId) {
         // For logged in users
         const user = await storage.getUser(req.session.userId);
@@ -5785,14 +5796,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/iq/submit", async (req, res) => {
     try {
       const { correctAnswers, totalQuestions, timeMinutes, suddenTestCorrect } = req.body;
-      
+
       if (!correctAnswers || !totalQuestions || !timeMinutes) {
         return res.status(400).json({ message: "Missing required test data" });
       }
 
       // Calculate IQ score
       const baseScore = (correctAnswers / totalQuestions) * 130 + 20;
-      
+
       // Time bonus calculation
       let timeBonus = 0;
       if (timeMinutes <= 5) timeBonus = Math.floor(Math.random() * 6) + 5; // 5-10
@@ -5802,20 +5813,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Sudden test bonus
       const suddenTestBonus = suddenTestCorrect ? 5 : 0;
-      
+
       const finalScore = Math.round(baseScore + timeBonus + suddenTestBonus);
       const clientIP = getClientIP(req);
 
       if (req.session?.userId) {
         // Update user IQ score
         await storage.updateUserIqScore(req.session.userId, finalScore);
-        
+
         // Also update IQ test tracking
         await storage.markIqTestCompleted(req.session.userId, 'user', finalScore);
       } else {
         // Update visitor IQ score
         await storage.updateVisitorIqScore(clientIP, finalScore);
-        
+
         // Also update IQ test tracking
         await storage.markIqTestCompleted(clientIP, 'ip', finalScore);
       }
@@ -5844,20 +5855,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const postId = parseInt(req.params.id);
       const userIp = getClientIP(req);
-      
+
       // Check if post exists
       const post = await GuildPostModel.findOne({ id: postId });
       if (!post) {
         return res.status(404).json({ message: "Guild post not found" });
       }
-      
+
       // Check if user has already liked this post
       const { GuildPostLikeModel } = await import('../shared/mongodb-schema');
       const existingLike = await GuildPostLikeModel.findOne({ postId, userIp });
-      
+
       if (existingLike) {
         if (existingLike.isLike) {
           // User already liked, remove like (toggle to 0, never negative)
@@ -5865,7 +5876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Ensure likes never go below 0
           const newLikes = Math.max(0, post.likes - 1);
           await GuildPostModel.updateOne({ id: postId }, { $set: { likes: newLikes } });
-          
+
           return res.json({ 
             message: "Like removed", 
             liked: false,
@@ -5880,7 +5891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const newLikes = post.likes + 1;
           const newDislikes = Math.max(0, post.dislikes - 1);
           await GuildPostModel.updateOne({ id: postId }, { $set: { likes: newLikes, dislikes: newDislikes } });
-          
+
           return res.json({ 
             message: "Changed to like", 
             liked: true,
@@ -5899,7 +5910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await newLike.save();
         const newLikes = post.likes + 1;
         await GuildPostModel.updateOne({ id: postId }, { $set: { likes: newLikes } });
-        
+
         return res.json({ 
           message: "Post liked", 
           liked: true,
@@ -5918,32 +5929,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const postId = parseInt(req.params.id);
       const { content } = req.body;
       const userId = req.session.userId;
       const userIp = getClientIP(req);
-      
+
       if (!content || !content.trim()) {
         return res.status(400).json({ message: "Comment content is required" });
       }
-      
+
       // Check if post exists
       const post = await GuildPostModel.findOne({ id: postId });
       if (!post) {
         return res.status(404).json({ message: "Guild post not found" });
       }
-      
+
       // Get user info
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       // Create comment
       const { GuildPostCommentModel } = await import('../shared/mongodb-schema');
       const nextId = await getNextSequence('guild_post_comment');
-      
+
       const newComment = new GuildPostCommentModel({
         id: nextId,
         postId,
@@ -5957,12 +5968,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authorProfileUrl: user.profileImageUrl,
         authorIq: user.iqScore
       });
-      
+
       await newComment.save();
-      
+
       // Update post comment count
       await GuildPostModel.updateOne({ id: postId }, { $inc: { comments: 1 } });
-      
+
       res.status(201).json({ 
         message: "Comment added successfully",
         comment: newComment
@@ -5977,10 +5988,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/guild-posts/:id/comments", async (req, res) => {
     try {
       const postId = parseInt(req.params.id);
-      
+
       const { GuildPostCommentModel } = await import('../shared/mongodb-schema');
       const comments = await GuildPostCommentModel.find({ postId }).sort({ createdAt: 1 });
-      
+
       res.json(comments);
     } catch (error) {
       console.error("Error fetching guild post comments:", error);
