@@ -1,5 +1,16 @@
 // Security URL transformation and code generation system
-import { v4 as uuidv4 } from 'uuid';
+// Browser-compatible UUID generator
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 // Security configuration
 const SECURITY_CONFIG = {
@@ -24,7 +35,7 @@ class SecurityManager {
 
   // Generate secure code for user
   generateSecureCode(userId?: string): string {
-    const sessionId = uuidv4();
+    const sessionId = generateUUID();
     const fingerprint = this.generateFingerprint();
     
     // Generate unique code
@@ -186,7 +197,7 @@ export function extractOriginalPath(securePath: string): { path: string; code: s
 
 // CSRF protection token generation
 export function generateCSRFToken(): string {
-  return btoa(uuidv4() + Date.now()).replace(/[+/=]/g, '');
+  return btoa(generateUUID() + Date.now()).replace(/[+/=]/g, '');
 }
 
 // XSS protection for user input
